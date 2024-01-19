@@ -1,0 +1,1092 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Read modules
+```{r}
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(ggVennDiagram)
+library(purrr)
+library(waterfalls)
+library(stringr)
+```
+
+# Basic mT stats (without samples)
+## Read data from tsv file
+```{r}
+# Data contains the header
+read.table(file = '~/Desktop/mT/new-masterTable/formatted_Hv3_mT.tsv', sep = '\t', header = TRUE) %>% 
+  as_tibble() -> df_basic
+df_basic
+```
+
+## Analyse data for 
+### Plot non-targeted transcripts
+```{r}
+# Count not targeted transcripts
+df_basic %>%
+  filter(is.na(target)) %>%
+  nrow() -> non_targeted
+
+df_basic %>% 
+  distinct(transcript_id) %>% 
+  nrow() -> all_transcripts
+
+targeted = all_transcripts - non_targeted
+
+tibble(x = c("targeted", "non-targeted"), y = c(targeted, non_targeted)) %>% 
+  ggplot(aes(x = x, y = y, fill=x)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = scales::comma(y)),
+            position = position_dodge(width=0.9),
+            vjust=-0.25,
+            size = 3.5) +
+  ylab('Number of transcripts') +
+  theme_minimal() +
+  scale_fill_brewer(palette="Set2") +
+  theme(axis.title.x=element_blank(),
+        axis.text = element_text(colour = "black", size = 11),
+        axis.ticks = element_line(colour = "black"),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.position = "none",
+        panel.grid = element_blank()
+        ) -> target_plot
+
+#pdf(file = "N_ALL_target_plot", width = 6, height = 5)
+
+target_plot
+```
+
+### Plot contribution of ea catalog to mT
+```{r}
+df_basic %>% 
+  group_by(target) %>% 
+  summarise(number = n()) %>%
+  filter(!is.na(target)) %>%
+  ggplot(aes(x = reorder(target, -number), y = number, fill=target)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = scales::comma(number)),
+            position = position_dodge(width=0.9),
+            vjust=-0.25,
+            size = 3.5) +
+  ylab('Number of transcripts') +
+  theme_minimal() +
+  #scale_fill_brewer(palette="Paired") +
+  theme(axis.title.x=element_blank(),
+        axis.text = element_text(colour = "black", size = 11),
+        axis.ticks = element_line(colour = "black"),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.position = "none",
+        panel.grid = element_blank()
+        ) -> catalog_plot
+
+
+#pdf(file = "ALL_catalog_plot", width = 19, height = 5)
+# lub tyle px 2000x450
+
+
+catalog_plot
+```
+
+
+## Verify samples - count how many transcripts were present only in one sample - using formatted_Hv3_mT.tsv
+### Histogram
+```{r}
+#pdf(file = "ALL_mT_sample_analysis_pre_and_post", width = 6, height = 4)
+df_basic %>%
+  select(transcript_id, sampleN) %>% 
+  distinct(transcript_id, sampleN) %>% 
+  #arrange(desc(sampleN))
+  filter(sampleN < 15) %>%
+  ggplot(., aes(x=sampleN)) + 
+  geom_histogram(binwidth=1) +
+  ggtitle("Histogram for all mT transcripts (pre- and post-capture)")
+```
+### Barplot
+```{r}
+#pdf(file = "N_ALL_mT_sample_analysis_pre_and_post.pdf", width = 6, height = 4)
+df_basic %>%
+  select(transcript_id, sampleN) %>% 
+  distinct(transcript_id, sampleN) %>% 
+  group_by(sampleN) %>% 
+  summarise(total_count=n_distinct(transcript_id)) %>%
+  filter(sampleN <= 10) %>% 
+  mutate(sampleN = as.character(sampleN)) %>% 
+  add_row(sampleN=paste0(11, "-", (df_basic %>% 
+                                     select(sampleN) %>%
+                                     max())),
+          total_count=(df_basic %>%
+                         select(transcript_id, sampleN) %>%
+                         distinct(transcript_id, sampleN) %>%
+                         group_by(sampleN) %>%
+                         summarise(total_count=n_distinct(transcript_id)) %>%
+                         filter(sampleN > 10) %>% 
+                         select(total_count) %>% 
+                         sum())) %>% 
+  mutate(percentage = prop.table(total_count)) %>%
+  ggplot(., aes(x=factor(sampleN, levels=c("1", "2", "3", "4", "5", "6", "7",
+                                           "8", "9", "10", "11-71")),
+                y=percentage)) + 
+  geom_bar(stat="identity", fill="steelblue") +
+  geom_text(aes(label=scales::comma(total_count)), vjust=-0.3, size=3.5) +
+  theme_minimal() +
+  #scale_x_continuous(breaks = seq(1, 20, by = 1)) +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1)) +
+  ylab('Percentage') +
+  xlab('sampleN') +
+  theme(legend.position = "none",
+        axis.ticks = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5, size=11),
+        plot.subtitle = element_text(hjust = 0.5, size=9, face="italic"),
+        panel.background = element_rect(fill = NA),
+        panel.grid.major.x = element_line(colour = NA),
+        panel.grid.minor.x = element_line(colour = NA),
+        axis.text = element_text(colour="black",
+                                 face="bold")) +
+  ggtitle(label = "Barchart representing number of full mT pre- and post-capture transcripts\npresent in different numbers of samples (sampleN).")
+```
+## Verify samples - count how many transcripts were present only in one sample - using ALL_mT_Hv3_transcript-sampleN.tsv
+For this analysis I used Basia's bash script (extract.gtf.tags.sh) to check if my previous approach, utilizing full mT data, was correct.
+```{r}
+# Data contains the header
+read.table(file = '~/Desktop/mT/ALL_mT_Hv3_transcript-sampleN_noFILE.tsv', sep = '\t', header = FALSE) %>% 
+  as_tibble() %>%
+  rename(transcript_id = V1,
+         sampleN = V2) -> df_transcript_sampleN
+ 
+
+df_transcript_sampleN %>%
+  #arrange(desc(sampleN))
+  filter(sampleN < 15) %>%
+  ggplot(., aes(x=sampleN)) + 
+  geom_histogram(binwidth=1) +
+  ggtitle("Histogram for all mT transcripts (pre- and post-capture)")
+```
+
+# mT analysis with sample data
+## Read data from tsv file
+```{r}
+# Data DO NOT contain header
+read.table(file = '~/Desktop/mT/new-masterTable/ALL_mT_Hv3_sample_stats.tsv', sep = '\t', header = FALSE) %>% 
+  as_tibble() -> df_samples
+
+colnames(df_samples) <- c('transcript_id',
+                          'tissue',
+                          'stage',
+                          'technology',
+                          'capture_status',
+                          'biological_replicate',
+                          'technical_replicate')
+```
+
+## Determine number of transcripts for ea platform (multi - both ont and pacBio)
+```{r}
+multi_transcripts <- df_samples %>%
+  select(transcript_id, technology) %>%
+  filter(technology=="ont") %>%
+  select(transcript_id) %>%
+  intersect(., (df_samples %>%
+                  select(transcript_id, technology) %>%
+                  filter(technology=="pacBioSII") %>%
+                  select(transcript_id)))
+
+technology_df <- data.frame(technology = c("multi", "ont", "pacBioSII"),
+                            number_of_transcripts = c(multi_transcripts %>%
+                                                        nrow(),
+                                                      df_samples %>%
+                                                        select(transcript_id, technology) %>%
+                                                        filter(technology=="ont") %>%
+                                                        select(transcript_id) %>%
+                                                        setdiff(., multi_transcripts) %>%
+                                                        nrow(),
+                                                      df_samples %>%
+                                                        select(transcript_id, technology) %>%
+                                                        filter(technology=="pacBioSII") %>%
+                                                        select(transcript_id) %>%
+                                                        setdiff(., multi_transcripts) %>%
+                                                        nrow()))
+
+# Plot the results
+technology_df %>%
+  mutate(percent = prop.table(number_of_transcripts)) %>% 
+
+  ggplot(data=.,
+         aes(x=reorder(technology, -percent),
+             y=percent,
+             fill=technology)) + 
+  geom_bar(stat="identity", position = "dodge") +
+  geom_text(aes(label = scales::comma(number_of_transcripts)),
+            position = position_dodge(width = 1),
+            vjust=-0.5,
+            size = 3) +
+  theme_minimal() +
+  scale_fill_brewer(palette="Set2") +
+  ylab('Percentage') +
+  xlab('Technology') +
+  theme(legend.position = "none") +
+  ggtitle(label="Number of full mT transcripts aquired using ont, pacBio or both technologies.") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1)) -> p_technology
+
+#pdf(file = "ALL_transcripts_by_technology.pdf", width = 6, height = 4)
+p_technology
+
+
+
+##### Stacked barplot
+# Plot the results
+technology_df %>%
+  mutate(percent = prop.table(number_of_transcripts)) %>% 
+
+  ggplot(data=.,
+         aes(x=1,#reorder(technology, -percent),
+             y=percent,
+             fill=factor(technology, levels=c("ont", "multi", "pacBioSII")))) + 
+  geom_bar(stat="identity") +
+   geom_text(aes(label = paste0(technology, " (", scales::comma(number_of_transcripts), ")")),
+             position=position_stack(vjust=0.5),
+             size = 4) +
+  theme_minimal() +
+  scale_fill_manual(values=c("#377EB8", "#4DAF4A", "#FFFF33")) +
+  ylab('Percentage') +
+  xlab('Technology') +
+  theme(legend.position = "none",
+        axis.ticks.y = element_line(colour = "black"),
+        #axis.title.x = element_blank(),
+        plot.title = element_text(hjust = 0.5,
+                                  size=9.0),
+        panel.background = element_rect(fill = NA),
+        panel.grid.major.x = element_line(colour = NA),
+        panel.grid.minor.x = element_line(colour = NA),
+        axis.text.x = element_blank(),
+        axis.text.y = element_text(colour="black",
+                                  face="bold")) +
+  ggtitle(label="Number of full mT transcripts aquired\nusing ont, pacBio or both technologies.") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1)) -> p_technology2
+
+#pdf(file = "N_ALL_transcripts_by_technology_stacked.pdf", width = 3, height = 4)
+p_technology2
+
+```
+
+## Tissues - Incremental plots
+
+### Incremental plot for pre-capture tissues of ALL STAGES
+```{r}
+pre_cap_all_df <- df_samples %>% 
+  filter(capture_status=="pre-capture") %>%    # Only pre-capture
+  select(transcript_id, tissue) %>%            
+  distinct(transcript_id, tissue)              # Leave only unique tissue per transcript
+
+
+# Determine tissues with highest transcripts number 
+pre_cap_all_df %>% 
+  group_by(tissue) %>% 
+  summarise(count=n()) %>% 
+  arrange(count) %>% 
+  select(tissue) %>%
+  as.list()
+
+# Lowest -> Highest
+# "Placenta" "TpoolA"   "CpoolA"   "WBlood"   "iPSC"     "Testis"   "Liver"    "Heart"    "Brain"   
+
+
+
+pre_cap_all_df %>%
+  group_by(transcript_id) %>%                 
+  summarise(number_of_tissues=n()) %>% 
+  filter(number_of_tissues==df_samples %>%     # Leave only transcripts present in all of the tissues
+           distinct(tissue) %>%                # filter(number_of_tissues=max(number_of_tissues)) to
+           nrow()) %>%                         # check for anomalies
+  select(transcript_id) -> smallest_common          
+
+pre_cap_all_df %>% 
+  filter(tissue=="Placenta") %>%
+  select(transcript_id) %>% 
+  setdiff(smallest_common) -> plac
+
+pre_cap_all_df %>% 
+  filter(tissue=="TpoolA") %>%
+  select(transcript_id) %>% 
+  setdiff(union(smallest_common, plac)) -> tpoola
+
+pre_cap_all_df %>% 
+  filter(tissue=="CpoolA") %>%
+  select(transcript_id) %>% 
+  setdiff(union(smallest_common, union(plac, tpoola))) -> cpoola
+
+
+pre_cap_all_df %>% 
+  filter(tissue=="WBlood") %>%
+  select(transcript_id) %>% 
+  setdiff(union(cpoola, union(smallest_common, union(plac, tpoola)))) -> wblood
+
+
+pre_cap_all_df %>% 
+  filter(tissue=="iPSC") %>%
+  select(transcript_id) %>% 
+  setdiff(union(wblood, union(cpoola, union(smallest_common, union(plac, tpoola))))) -> ipsc
+
+
+pre_cap_all_df %>% 
+  filter(tissue=="Testis") %>%
+  select(transcript_id) %>% 
+  setdiff(union(ipsc, union(wblood, union(cpoola, union(smallest_common, union(plac, tpoola)))))) -> testis
+
+
+pre_cap_all_df %>% 
+  filter(tissue=="Liver") %>%
+  select(transcript_id) %>% 
+  setdiff(union(testis, union(ipsc, union(wblood, union(cpoola, union(smallest_common, union(plac, tpoola))))))) -> liver
+
+
+pre_cap_all_df %>% 
+  filter(tissue=="Heart") %>%
+  select(transcript_id) %>% 
+  setdiff(union(liver, union(testis, union(ipsc, union(wblood, union(cpoola, union(smallest_common, union(plac, tpoola)))))))) -> heart
+
+
+pre_cap_all_df %>% 
+  filter(tissue=="Brain") %>%
+  select(transcript_id) %>% 
+  setdiff(union(heart, union(liver, union(testis, union(ipsc, union(wblood, union(cpoola, union(smallest_common, union(plac, tpoola))))))))) -> brain
+
+
+df_waterfall <- data.frame(tissue=c("common", "Placenta", "TpoolA", "CpoolA", "WBlood","iPSC","Testis","Liver","Heart", "Brain"),
+                           number=c(smallest_common %>% 
+                                      nrow(),
+                                    plac %>% 
+                                      nrow(),
+                                    tpoola %>% 
+                                      nrow(),
+                                    cpoola %>% 
+                                      nrow(),
+                                    wblood %>% 
+                                      nrow(),
+                                    ipsc %>%
+                                      nrow(),
+                                    testis %>% 
+                                      nrow(),
+                                    liver %>% 
+                                      nrow(),
+                                    heart %>% 
+                                      nrow(),
+                                    brain %>% 
+                                      nrow())
+  
+)
+
+waterfall(df_waterfall,
+          calc_total = TRUE,
+          #rect_width = 0.4,
+          draw_lines = TRUE,
+          linetype = 3,
+          fill_by_sign = FALSE,
+          fill_colours = c("#FF7F00","#FF7F00","#FF7F00","#FF7F00","#FF7F00","#FF7F00","#FF7F00","#FF7F00","#FF7F00","#FF7F00","#FF7F00"),
+          total_rect_color = "#4DAF4A",
+          total_rect_text_color = "black") +
+  ylab('Percentage') +
+  theme_minimal() +
+  ylab('Percentage') +
+  theme(axis.title.x=element_blank(),
+        axis.text = element_text(colour = "black", size = 10),
+        axis.ticks = element_line(colour = "black"),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        legend.position = "none",
+        panel.grid = element_blank()
+        ) +
+  scale_y_continuous(labels = function(x) paste0(round(x/sum(df_waterfall$number)*100, 0), "%"),
+                     breaks = seq(0, sum(df_waterfall$number), sum(df_waterfall$number)*0.25)) -> p_all_tissue_waterfall
+
+
+# # Test
+# pre_cap_df %>% 
+#   distinct(transcript_id) %>% 
+#   nrow()
+
+#pdf(file = "ALL_waterfall_tissue_pre", width = 7, height = 4)
+p_all_tissue_waterfall
+
+```
+
+### Pre-capture tissues of ADULT STAGE data preparation
+```{r}
+pre_cap_adult_df <- df_samples %>% 
+  filter(capture_status=="pre-capture") %>%    # Only pre-capture
+  filter(stage=="Adult") %>% 
+  select(transcript_id, tissue) %>%            
+  distinct(transcript_id, tissue)              # Leave only unique tissue per transcript
+
+
+# Determine tissues with highest transcripts number 
+pre_cap_adult_df %>% 
+  group_by(tissue) %>% 
+  summarise(count=n()) %>% 
+  arrange(count) %>% 
+  select(tissue) %>%
+  as.list()
+
+# Lowest -> Highest
+# "TpoolA" "Liver"  "CpoolA" "WBlood" "Heart"  "Brain"  "Testis"
+
+
+pre_cap_adult_df %>%
+  group_by(transcript_id) %>%                 
+  summarise(number_of_tissues=n()) %>% 
+  filter(number_of_tissues==pre_cap_adult_df %>%     # Leave only transcripts present in all of the tissues
+           distinct(tissue) %>%                      # filter(number_of_tissues=max(number_of_tissues)) to
+           nrow()) %>%                               # check for anomalies
+  select(transcript_id) -> pre_smallest_common          
+
+
+pre_cap_adult_df %>% 
+  filter(tissue=="TpoolA") %>%
+  select(transcript_id) %>% 
+  setdiff(pre_smallest_common) -> pre_tpoola
+
+pre_cap_adult_df %>% 
+  filter(tissue=="Liver") %>%
+  select(transcript_id) %>% 
+  setdiff(union(pre_smallest_common, pre_tpoola)) -> pre_liver
+
+
+pre_cap_adult_df %>% 
+  filter(tissue=="CpoolA") %>%
+  select(transcript_id) %>% 
+  setdiff(union(pre_liver, union(pre_smallest_common, pre_tpoola))) -> pre_cpoola
+
+
+pre_cap_adult_df %>% 
+  filter(tissue=="WBlood") %>%
+  select(transcript_id) %>% 
+  setdiff(union(pre_cpoola, union(pre_liver, union(pre_smallest_common, pre_tpoola)))) -> pre_wblood
+
+
+pre_cap_adult_df %>% 
+  filter(tissue=="Heart") %>%
+  select(transcript_id) %>% 
+  setdiff(union(pre_wblood, union(pre_cpoola, union(pre_liver, union(pre_smallest_common, pre_tpoola))))) -> pre_heart
+
+
+pre_cap_adult_df %>% 
+  filter(tissue=="Brain") %>%
+  select(transcript_id) %>% 
+  setdiff(union(pre_heart, union(pre_wblood, union(pre_cpoola, union(pre_liver, union(pre_smallest_common, pre_tpoola)))))) -> pre_brain
+
+
+pre_cap_adult_df %>% 
+  filter(tissue=="Testis") %>%
+  select(transcript_id) %>% 
+  setdiff(union(pre_brain, union(pre_heart, union(pre_wblood, union(pre_cpoola, union(pre_liver, union(pre_smallest_common, pre_tpoola))))))) -> pre_testis
+
+
+pre_adult_tissues_df <- data.frame(tissue=factor(c("common", "TpoolA", "Liver", "CpoolA","WBlood","Heart","Brain","Testis"),
+                                                 levels = c("Testis","Brain","Heart","WBlood", "CpoolA", "Liver", "TpoolA", "common")),
+                                   number=c(pre_smallest_common %>%
+                                              nrow(),
+                                            pre_tpoola %>% 
+                                              nrow(),
+                                            pre_liver %>% 
+                                              nrow(),
+                                            pre_cpoola %>% 
+                                              nrow(),
+                                            pre_wblood %>%
+                                              nrow(),
+                                            pre_heart %>% 
+                                              nrow(),
+                                            pre_brain %>% 
+                                              nrow(),
+                                            pre_testis %>% 
+                                              nrow()),
+                                   capture_status=c("pre-capture")
+)
+
+```
+
+### Post-capture tissues of ADULT STAGE data preparation
+```{r}
+post_cap_adult_df <- df_samples %>% 
+  filter(capture_status=="post-capture") %>%    # Only post-capture
+  filter(stage=="Adult") %>% 
+  select(transcript_id, tissue) %>%            
+  distinct(transcript_id, tissue)              # Leave only unique tissue per transcript
+
+
+# Determine tissues with highest transcripts number 
+post_cap_adult_df %>% 
+  group_by(tissue) %>% 
+  summarise(count=n()) %>% 
+  arrange(count) %>% 
+  select(tissue) %>%
+  as.list()
+
+# Lowest -> Highest
+# "TpoolA" "WBlood" "Heart"  "CpoolA" "Liver"  "Brain"  "Testis"
+
+post_cap_adult_df %>%
+  group_by(transcript_id) %>%                 
+  summarise(number_of_tissues=n()) %>% 
+  filter(number_of_tissues==post_cap_adult_df %>%     # Leave only transcripts present in all of the tissues
+           distinct(tissue) %>%                       # filter(number_of_tissues=max(number_of_tissues)) to
+           nrow()) %>%                                # check for anomalies
+  select(transcript_id) -> post_smallest_common          
+
+
+post_cap_adult_df %>% 
+  filter(tissue=="TpoolA") %>%
+  select(transcript_id) %>% 
+  setdiff(post_smallest_common) -> post_tpoola
+
+post_cap_adult_df %>% 
+  filter(tissue=="WBlood") %>%
+  select(transcript_id) %>% 
+  setdiff(union(post_smallest_common, post_tpoola)) -> post_wblood
+
+
+post_cap_adult_df %>% 
+  filter(tissue=="Heart") %>%
+  select(transcript_id) %>% 
+  setdiff(union(post_wblood, union(post_smallest_common, post_tpoola))) -> post_heart
+
+
+post_cap_adult_df %>% 
+  filter(tissue=="CpoolA") %>%
+  select(transcript_id) %>% 
+  setdiff(union(post_heart, union(post_wblood, union(post_smallest_common, post_tpoola)))) -> post_cpoola
+
+
+post_cap_adult_df %>% 
+  filter(tissue=="Liver") %>%
+  select(transcript_id) %>% 
+  setdiff(union(post_cpoola, union(post_heart, union(post_wblood, union(post_smallest_common, post_tpoola))))) -> post_liver
+
+
+post_cap_adult_df %>% 
+  filter(tissue=="Brain") %>%
+  select(transcript_id) %>% 
+  setdiff(union(post_liver, union(post_cpoola, union(post_heart, union(post_wblood, union(post_smallest_common, post_tpoola)))))) -> post_brain
+
+
+post_cap_adult_df %>% 
+  filter(tissue=="Testis") %>%
+  select(transcript_id) %>% 
+  setdiff(union(post_brain, union(post_liver, union(post_cpoola, union(post_heart, union(post_wblood, union(post_smallest_common, post_tpoola))))))) -> post_testis
+
+
+post_adult_tissues_df <- data.frame(tissue=factor(c("common", "TpoolA", "WBlood", "Heart", "CpoolA", "Liver", "Brain", "Testis"),
+                                                  levels=c("Testis", "Brain", "Liver", "CpoolA", "Heart", "WBlood", "TpoolA", "common")),
+                                   number=c(post_smallest_common %>%
+                                              nrow(),
+                                            post_tpoola %>% 
+                                              nrow(),
+                                            post_wblood %>% 
+                                              nrow(),
+                                            post_heart %>% 
+                                              nrow(),
+                                            post_cpoola %>%
+                                              nrow(),
+                                            post_liver %>% 
+                                              nrow(),
+                                            post_brain %>% 
+                                              nrow(),
+                                            post_testis %>% 
+                                              nrow()),
+                                   capture_status=c("post-capture")
+)
+
+```
+
+### Create the incremental plot
+```{r}
+ggplot() +
+  geom_bar(aes(x=pre_adult_tissues_df$capture_status,
+               y=pre_adult_tissues_df$number,
+               fill=pre_adult_tissues_df$tissue),
+           position="stack", stat="identity") +
+  geom_bar(aes(x=post_adult_tissues_df$capture_status,
+               y=post_adult_tissues_df$number,
+               fill=post_adult_tissues_df$tissue),
+           position="stack", stat="identity") +
+  geom_text(aes(x=pre_adult_tissues_df$capture_status,
+                y=pre_adult_tissues_df$number,
+                label = (paste0(pre_adult_tissues_df$tissue, " (", scales::comma(pre_adult_tissues_df$number), ")"))),
+            position = position_stack(vjust = .5),
+            size = 3) +
+  geom_text(aes(x=post_adult_tissues_df$capture_status,
+              y=post_adult_tissues_df$number,
+              label = (paste0(post_adult_tissues_df$tissue, " (", scales::comma(post_adult_tissues_df$number), ")"))),
+          position = position_stack(vjust = .5),
+          size = 3) +
+  theme_minimal() +
+  theme(axis.text = element_text(colour = "black", size = 10),
+      axis.ticks = element_line(colour = "black"),
+      panel.background = element_rect(fill = "white", colour = "grey50"),
+      legend.position = "none",
+      panel.grid = element_blank()
+      ) +
+  scale_fill_brewer(palette="Set2") +
+  ylab('Number of transcripts') +
+  xlab('Capture status') +
+  theme(legend.position = "none") + 
+  scale_y_continuous(labels = scales::label_number(suffix = "k", scale = 1e-3, big.mark = ",")) -> p_tissue_incremental
+
+#pdf(file = "ALL_tissue_incremental", width = 6, height = 4)
+p_tissue_incremental
+
+```
+
+
+## Tissues - Correlation matrix
+### Pre-capture
+```{r}
+pre_cap_all_matrix_df <- df_samples %>%
+  filter(capture_status=="pre-capture") %>%    # Only pre-capture
+  distinct(transcript_id, tissue, stage) %>%   # Leave only unique tissue per transcript > don't include technology
+  mutate(tissue=paste0(tissue," (", stage, ")")) %>% 
+  select(transcript_id, tissue) %>% 
+  group_by(tissue) %>% 
+  summarize(transcripts = list(transcript_id)) %>% 
+  cross_join(x=., y=., suffix = c("1", "2")) %>% 
+  rowwise() %>% 
+  mutate(intersecting = list(intersect(x=transcripts1, y=transcripts2))) %>% 
+  mutate(intersecting_no = length(intersecting)) %>% 
+  mutate(percentage = intersecting_no/length(transcripts1) * 100) %>% 
+  mutate(transcripts1_number = length(transcripts1))
+
+
+pre_cap_all_matrix_df %>% 
+  ggplot(., aes(tissue1, tissue2)) +
+  geom_tile(aes(fill = percentage)) +
+  #geom_text(aes(label = round(value, 1))) +
+  scale_fill_gradient(low = "white", high = "red")
+
+
+pre_cap_all_matrix_df %>% 
+  ggplot(data=.) +
+  geom_tile(data = pre_cap_all_matrix_df %>% filter(percentage == 100),
+            aes(x=tissue1,
+                y=tissue2), fill="#A2B46A") + #2491AA
+  geom_tile(data = pre_cap_all_matrix_df %>% filter(percentage < 100),
+            aes(x=tissue1,
+                y=tissue2,
+                fill = percentage)) +
+  geom_text(size=5,
+            aes(x=tissue1,
+                y=tissue2,
+                label = (scales::percent(percentage/100, accuracy = 0.1L)))) +
+  geom_text(size=3.2,
+            aes(x=tissue1,
+                y=tissue2,
+                label = paste0("\n\n",
+                               "(", scales::comma(intersecting_no), "/", scales::comma(transcripts1_number), ")"))) +
+  scale_fill_gradient(low = "white",
+                      high = "#BDD27C") +  #29aac7
+   theme(axis.title.x = element_blank(),
+         axis.title.y = element_blank(),
+         axis.ticks = element_line(colour = NA),
+         plot.title = element_text(hjust = 0.5),
+         panel.background = element_rect(fill = NA),
+         panel.grid.major = element_line(colour = NA),
+         axis.text.x = element_text(colour="black",
+                                    face="bold"),
+         axis.text.y = element_text(colour="black",
+                                    face="bold")) +
+  labs(title = "Full mT transcripts shared between tissues (pre-capture).", fill = "% of transcripts") -> p_pre_cap_heatmap
+
+
+#pdf(file="N_ALL_pre_cap_heatmap.pdf", width = 16, height = 8)
+p_pre_cap_heatmap
+
+# label = round(percentage, 1))) +
+# label = scales::percent(percentage/100, accuracy = 0.1L))) +
+```
+### Post-capture
+```{r}
+post_cap_all_matrix_df <- df_samples %>%
+  filter(capture_status=="post-capture") %>%    # Only post-capture
+  distinct(transcript_id, tissue, stage) %>%   # Leave only unique tissue per transcript > don't include technology
+  mutate(tissue=paste0(tissue," (", stage, ")")) %>% 
+  select(transcript_id, tissue) %>% 
+  group_by(tissue) %>% 
+  summarize(transcripts = list(transcript_id)) %>% 
+  cross_join(x=., y=., suffix = c("1", "2")) %>% 
+  rowwise() %>% 
+  mutate(intersecting = list(intersect(x=transcripts1, y=transcripts2))) %>% 
+  mutate(intersecting_no = length(intersecting)) %>% 
+  mutate(percentage = intersecting_no/length(transcripts1) * 100) %>% 
+  mutate(transcripts1_number = length(transcripts1))
+
+post_cap_all_matrix_df %>% 
+  ggplot(data=.) +
+  geom_tile(data = post_cap_all_matrix_df %>% filter(percentage == 100),
+            aes(x=tissue1,
+                y=tissue2), fill="#55985F") +   #30E48D
+  geom_tile(data = post_cap_all_matrix_df %>% filter(percentage < 100),
+            aes(x=tissue1,
+                y=tissue2,
+                fill = percentage)) +
+  geom_text(size=5,
+            aes(x=tissue1,
+                y=tissue2,
+                label = (scales::percent(percentage/100, accuracy = 0.1L)))) +
+  geom_text(size=3.2,
+            aes(x=tissue1,
+                y=tissue2,
+                label = paste0("\n\n",
+                               "(", scales::comma(intersecting_no), "/", scales::comma(transcripts1_number), ")"))) +
+  scale_fill_gradient(low = "white",
+                      high = "#66B672") +    #2AC77B
+   theme(axis.title.x = element_blank(),
+         axis.title.y = element_blank(),
+         axis.ticks = element_line(colour = NA),
+         plot.title = element_text(hjust = 0.5),
+         panel.background = element_rect(fill = NA),
+         panel.grid.major = element_line(colour = NA),
+         axis.text.x = element_text(colour="black",
+                                    face="bold"),
+         axis.text.y = element_text(colour="black",
+                                    face="bold")) +
+  labs(title = "Full mT transcripts shared between tissues (post-capture).", fill = "% of transcripts") -> p_post_cap_heatmap
+
+
+#pdf(file="N_ALL_post_cap_heatmap.pdf", width = 16, height = 8)
+p_post_cap_heatmap
+
+```
+### Pre&Post-capture
+```{r}
+preANDpost_cap_all_matrix_df <- df_samples %>%
+  distinct(transcript_id, tissue, stage) %>%   # Leave only unique tissue per transcript > don't include technology
+  mutate(tissue=paste0(tissue," (", stage, ")")) %>% 
+  select(transcript_id, tissue) %>% 
+  group_by(tissue) %>% 
+  summarize(transcripts = list(transcript_id)) %>% 
+  cross_join(x=., y=., suffix = c("1", "2")) %>% 
+  rowwise() %>% 
+  mutate(intersecting = list(intersect(x=transcripts1, y=transcripts2))) %>% 
+  mutate(intersecting_no = length(intersecting)) %>% 
+  mutate(percentage = intersecting_no/length(transcripts1) * 100) %>% 
+  mutate(transcripts1_number = length(transcripts1))
+
+preANDpost_cap_all_matrix_df %>% 
+  ggplot(data=.) +
+  geom_tile(data = preANDpost_cap_all_matrix_df %>% filter(percentage == 100),
+            aes(x=tissue1,
+                y=tissue2), fill="#029A4B") +   #E48430
+  geom_tile(data = preANDpost_cap_all_matrix_df %>% filter(percentage < 100),
+            aes(x=tissue1,
+                y=tissue2,
+                fill = percentage)) +
+  geom_text(size=5,
+            aes(x=tissue1,
+                y=tissue2,
+                label = (scales::percent(percentage/100, accuracy = 0.1L)))) +
+  geom_text(size=3.2,
+            aes(x=tissue1,
+                y=tissue2,
+                label = paste0("\n\n",
+                               "(", scales::comma(intersecting_no), "/", scales::comma(transcripts1_number), ")"))) +
+  scale_fill_gradient(low = "white",
+                      high = "#02B659") +    #C8742A
+   theme(axis.title.x = element_blank(),
+         axis.title.y = element_blank(),
+         axis.ticks = element_line(colour = NA),
+         plot.title = element_text(hjust = 0.5),
+         panel.background = element_rect(fill = NA),
+         panel.grid.major = element_line(colour = NA),
+         axis.text.x = element_text(colour="black",
+                                    face="bold"),
+         axis.text.y = element_text(colour="black",
+                                    face="bold")) +
+  labs(title = "Full mT transcripts shared between tissues (pre&post-capture).", fill = "% of transcripts") -> p_preANDpost_cap_heatmap
+
+
+#pdf(file="N_ALL_preANDpost_cap_heatmap.pdf", width = 16, height = 8)
+p_preANDpost_cap_heatmap
+```
+
+
+
+
+
+
+
+
+
+
+
+# WYWALIC
+```{r}
+pre_cap_df <- df_samples %>% 
+  filter(capture_status=="pre-capture") %>%    # Only pre-capture
+  select(transcript_id, tissue) %>%            
+  distinct(transcript_id, tissue)              # Leave only unique tissue per transcript
+
+# Determine tissues with highest transcripts number 
+pre_cap_df %>% 
+  group_by(tissue) %>% 
+  summarise(count=n()) %>% 
+  arrange(count) %>% 
+  select(tissue) %>%
+  as.list()
+
+# Lowest -> Highest
+# "Placenta" "TpoolA"   "CpoolA"   "WBlood"   "iPSC"     "Testis"   "Liver"    "Heart"    "Brain"   
+
+
+
+pre_cap_df %>%
+  group_by(transcript_id) %>%                 
+  summarise(number_of_tissues=n()) %>% 
+  filter(number_of_tissues==df_samples %>%     # Leave only transcripts present in all of the tissues
+           distinct(tissue) %>%                # filter(number_of_tissues=max(number_of_tissues)) to
+           nrow()) %>%                         # check for anomalies
+  select(transcript_id) -> smallest_common          
+
+pre_cap_df %>% 
+  filter(tissue=="Brain") %>%
+  select(transcript_id) %>% 
+  setdiff(smallest_common) -> brain
+
+pre_cap_df %>% 
+  filter(tissue=="TpoolA") %>%
+  select(transcript_id) %>% 
+  setdiff(union(smallest_common, brain)) -> tpoola
+
+pre_cap_df %>% 
+  filter(tissue=="CpoolA") %>%
+  select(transcript_id) %>% 
+  setdiff(union(smallest_common, union(brain, tpoola))) -> cpoola
+
+
+pre_cap_df %>% 
+  filter(tissue=="WBlood") %>%
+  select(transcript_id) %>% 
+  setdiff(union(cpoola, union(smallest_common, union(brain, tpoola)))) -> wblood
+
+
+pre_cap_df %>% 
+  filter(tissue=="iPSC") %>%
+  select(transcript_id) %>% 
+  setdiff(union(wblood, union(cpoola, union(smallest_common, union(brain, tpoola))))) -> ipsc
+
+
+pre_cap_df %>% 
+  filter(tissue=="Testis") %>%
+  select(transcript_id) %>% 
+  setdiff(union(ipsc, union(wblood, union(cpoola, union(smallest_common, union(brain, tpoola)))))) -> testis
+
+
+pre_cap_df %>% 
+  filter(tissue=="Liver") %>%
+  select(transcript_id) %>% 
+  setdiff(union(testis, union(ipsc, union(wblood, union(cpoola, union(smallest_common, union(brain, tpoola))))))) -> liver
+
+
+pre_cap_df %>% 
+  filter(tissue=="Heart") %>%
+  select(transcript_id) %>% 
+  setdiff(union(liver, union(testis, union(ipsc, union(wblood, union(cpoola, union(smallest_common, union(brain, tpoola)))))))) -> heart
+
+
+pre_cap_df %>% 
+  filter(tissue=="Placenta") %>%
+  select(transcript_id) %>% 
+  setdiff(union(heart, union(liver, union(testis, union(ipsc, union(wblood, union(cpoola, union(smallest_common, union(brain, tpoola))))))))) -> plac
+
+
+df_waterfall <- data.frame(tissue=c("common", "Brain", "TpoolA", "CpoolA", "WBlood","iPSC","Testis","Liver","Heart", "Placenta"),
+                           number=c(smallest_common %>% 
+                                      nrow(),
+                                    brain%>% 
+                                      nrow(),
+                                    tpoola %>% 
+                                      nrow(),
+                                    cpoola %>% 
+                                      nrow(),
+                                    wblood %>% 
+                                      nrow(),
+                                    ipsc %>%
+                                      nrow(),
+                                    testis %>% 
+                                      nrow(),
+                                    liver %>% 
+                                      nrow(),
+                                    heart %>% 
+                                      nrow(),
+                                    plac %>% 
+                                      nrow())
+  
+)
+
+waterfall(df_waterfall,
+          calc_total = TRUE,
+          #rect_width = 0.4,
+          draw_lines = TRUE,
+          linetype = 3,
+          #fill_by_sign = TRUE,
+          #fill_colours = c("steelblue","green","yellow","Red","Pink","grey92", "white"),
+          total_rect_color = "lightblue",
+          total_rect_text_color = "black") -> p_tissue
+
+
+
+# # Test
+# pre_cap_df %>% 
+#   distinct(transcript_id) %>% 
+#   nrow()
+```
+
+```{r}
+# # Get data
+# df_samples %>% 
+#   filter(capture_status=="pre-capture") %>%    # Only pre-capture
+#   select(transcript_id, tissue) %>%
+#   group_by(tissue) %>% 
+#   summarise(transcripts=list(transcript_id)) %>% 
+#   tibble::column_to_rownames(var="tissue") -> t_df
+# 
+# t <- setNames(split(t_df, seq(nrow(t_df))), rownames(t_df))
+# 
+# t[1:2]
+# 
+# ggVennDiagram(t[1:2])
+
+```
+
+
+
+
+
+## Plot contribution by tissue, stage, capture status 
+```{r}
+df_samples %>%
+  group_by(tissue) %>%
+  summarise(total_count=n()) %>% 
+  mutate(percent = prop.table(total_count)) %>% 
+
+  ggplot(data=.,
+         aes(x=reorder(tissue, -percent),
+             y=percent,
+             fill=tissue)) + 
+  geom_bar(stat="identity", position = "dodge") +
+  geom_text(aes(label = scales::comma(total_count)),
+            position = position_dodge(width = 1),
+            vjust=-0.5,
+            size = 2) +
+  theme_minimal() +
+  scale_fill_brewer(palette="Spectral") +
+  xlab('Tissue') +
+  ylab('Percentage') +
+  theme(legend.position = "none") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,0.3)) -> p1
+
+df_samples %>%
+  group_by(stage) %>%
+  summarise(total_count=n()) %>% 
+  mutate(percent = prop.table(total_count)) %>% 
+
+  ggplot(data=.,
+         aes(x=stage,
+             y=percent,
+             fill=stage)) + 
+  geom_bar(stat="identity", position = "dodge") +
+  geom_text(aes(label = scales::comma(total_count)),
+            position = position_dodge(width = 1),
+            vjust=-0.5,
+            size = 3) +
+  theme_minimal() +
+  scale_fill_brewer(palette="Set3") +
+  ylab('Percentage') +
+  xlab('Stage') +
+  theme(legend.position = "none") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1)) -> p2
+
+df_samples %>%
+  group_by(capture_status) %>%
+  summarise(total_count=n()) %>% 
+  mutate(percent = prop.table(total_count)) %>% 
+
+  ggplot(data=.,
+         aes(x=reorder(capture_status, -percent),
+             y=percent,
+             fill=capture_status)) + 
+  geom_bar(stat="identity", position = "dodge") +
+  geom_text(aes(label = scales::comma(total_count)),
+            position = position_dodge(width = 1),
+            vjust=-0.5,
+            size = 3) +
+  theme_minimal() +
+  scale_fill_brewer(palette="Spectral") +
+  xlab('Capture status') +
+  ylab('Percentage') +
+  theme(legend.position = "none") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1)) -> p3
+
+
+#pdf(file = "ALL_samples_plot", width = 12, height = 5)
+p1 + p2 + p3
+
+```
+
+# ALL vs RNA mT transcripts
+## Read data
+```{r}
+# ALL mT transcripts
+read.table(file = '~/Desktop/mT/formatted_Hv3_mT.tsv', sep = '\t', header = TRUE) %>% 
+  as_tibble() -> df_all_mT
+
+read.table(file = '~/Desktop/mT/formatted_RNA_Hv3_mT.tsv', sep = '\t', header = TRUE) %>% 
+  as_tibble() -> df_rna_mT
+```
+
+## Comparison plot
+```{r}
+df_all_mT %>% 
+  distinct(transcript_id) %>% 
+  nrow() -> ALL_transcripts
+
+df_rna_mT %>% 
+  distinct(transcript_id) %>% 
+  nrow() -> RNA_transcripts
+
+tibble(x = c("masterTable", "RNA masterTable"), y = c(ALL_transcripts, RNA_transcripts)) %>% 
+  mutate(percent = c(1, RNA_transcripts/ALL_transcripts)) %>%
+  ggplot(aes(x = x, y = percent, fill=x)) +
+    geom_bar(stat="identity", position = "dodge") +
+  geom_text(aes(label = scales::comma(y)),
+            position = position_dodge(width = 0.9),
+            vjust=-0.5,
+            size = 3) +
+  theme_minimal() +
+  scale_fill_brewer(palette="Set2") +
+  ylab('Percentage') +
+  theme(axis.title.x=element_blank(),
+        axis.text = element_text(colour = "black", size = 11),
+        axis.ticks = element_line(colour = "black"),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        legend.position = "none",
+        panel.grid = element_blank()
+        ) +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1)) -> ALL_vs_RNA_plot
+
+#pdf(file = "ALL_vs_RNA_plot", width = 6, height = 5)
+
+ALL_vs_RNA_plot
+```
+
+
+

@@ -1,0 +1,126 @@
+---
+title: "RNA_mT_Hv3_stats"
+output:
+  html_notebook: default
+  pdf_document: default
+---
+
+# Load necessary libraries
+```{r}
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+```
+
+
+# Load data:
+```{r}
+df <- read.delim("/home/tomasz/Desktop/mT/RNA_mT_Hv3_sample_stats.tsv",
+                 sep="\t",
+                 header = FALSE)
+#View(df)
+
+colnames(df) <- c('tissue',
+                  'stage',
+                  'technology',
+                  'capture_status',
+                  'biological_replicate',
+                  'technical_replicate')
+```
+
+# Create some plots:
+```{r}
+df %>%
+  group_by(technology) %>%
+  summarise(total_count=n()) %>% 
+  mutate(percent = prop.table(total_count)) %>% 
+
+  ggplot(data=.,
+         aes(x=technology,
+             y=percent,
+             fill=technology)) + 
+  geom_bar(stat="identity", position = "dodge") +
+  geom_text(aes(label = scales::comma(total_count)), #label = paste0(total_count)),
+            position = position_dodge(width = 1),
+            vjust=-0.5,
+            size = 3) +
+  theme_minimal() +
+  scale_fill_brewer(palette="Pastel1") +
+  ylab('Percentage') +
+  xlab('Technology') +
+  theme(legend.position = "none") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1)) -> p1
+
+df %>%
+  group_by(tissue) %>%
+  summarise(total_count=n()) %>% 
+  mutate(percent = prop.table(total_count)) %>% 
+
+  ggplot(data=.,
+         aes(x=reorder(tissue, -percent),
+             y=percent,
+             fill=tissue)) + 
+  geom_bar(stat="identity", position = "dodge") +
+  geom_text(aes(label = scales::comma(total_count)),
+            position = position_dodge(width = 1),
+            vjust=-0.5,
+            size = 2) +
+  theme_minimal() +
+  scale_fill_brewer(palette="Spectral") +
+  xlab('Tissue') +
+  ylab('Percentage') +
+  theme(legend.position = "none") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,0.3)) -> p2
+
+df %>%
+  group_by(stage) %>%
+  summarise(total_count=n()) %>% 
+  mutate(percent = prop.table(total_count)) %>% 
+
+  ggplot(data=.,
+         aes(x=stage,
+             y=percent,
+             fill=stage)) + 
+  geom_bar(stat="identity", position = "dodge") +
+  geom_text(aes(label = scales::comma(total_count)),
+            position = position_dodge(width = 1),
+            vjust=-0.5,
+            size = 3) +
+  theme_minimal() +
+  scale_fill_brewer(palette="Set3") +
+  ylab('Percentage') +
+  xlab('Stage') +
+  theme(legend.position = "none") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1)) -> p3
+
+df %>%
+  group_by(capture_status) %>%
+  summarise(total_count=n()) %>% 
+  mutate(percent = prop.table(total_count)) %>% 
+
+  ggplot(data=.,
+         aes(x=reorder(capture_status, -percent),
+             y=percent,
+             fill=capture_status)) + 
+  geom_bar(stat="identity", position = "dodge") +
+  geom_text(aes(label = scales::comma(total_count)),
+            position = position_dodge(width = 1),
+            vjust=-0.5,
+            size = 3) +
+  theme_minimal() +
+  scale_fill_brewer(palette="Spectral") +
+  xlab('Capture status') +
+  ylab('Percentage') +
+  theme(legend.position = "none") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1)) -> p4
+
+
+#svg(bg = "white", width=14, height=6)
+#pdf(bg = "white", width=14, height=6)
+#pdf(file = "RNA_samples_plot", width = 12, height = 5)
+p1 + p2 + p3 + p4
+```

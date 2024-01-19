@@ -1,0 +1,65 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+#Read modules
+```{r}
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(purrr)
+library(stringr)
+```
+
+
+# Manualy create dataframe
+cat t_s_lncrna_cat.loci.gff | awk '{print$10}' | sort | uniq | wc -l
+456759
+cat t_s_lncrna_cat.loci.gff | awk '{print$38}' | sort | uniq | wc -l
+115131
+cat tmerged_T_RNA_ICmT_and_catalogs.loci.gff | awk '{print$10}' | sort | uniq | wc -l
+415896
+cat tmerged_T_RNA_ICmT_and_catalogs.loci.gff | awk '{print$38}' | sort | uniq | wc -l
+113527
+
+```{r}
+df <- data.frame (data_set  = c("catalogues", "catalogues", "cat+RNA_ICmT", "cat+RNA_ICmT"),
+                  id_type = c("transcript_id", "gene_id", "transcript_id", "gene_id"),
+                  count = c(456759, 115131, 415896, 113527)
+                  )
+df
+```
+# Plot data
+```{r}
+#pdf(file = "tmerged_cat_and_T_RNA-ICmT.pdf", width = 6.2, height = 4)
+df %>%
+  ggplot(data=.,aes(x=reorder(data_set, -count),
+                    y=count,
+                    fill=reorder(id_type, -count))) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_text(aes(label = paste0(scales::comma(count))),
+          position = position_dodge(width=0.9),
+          vjust=-0.25,
+          size = 2.9) +
+  theme_minimal() +
+  ylab('Count') +
+  ggtitle(label = "Number of transcripts and genes for merged catalogues\nand catalogues merged with RNA intron chain mT slice") +
+  scale_fill_brewer(palette="Accent", direction = 1) +
+  theme(axis.title.x=element_blank(),
+        axis.text = element_text(colour = "black", size = 11),
+        axis.ticks = element_line(colour = "black"),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        legend.title = element_blank(),
+        legend.position = c(0.9, 0.9),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5, size=11)
+        ) +
+  scale_y_continuous(labels=scales::comma)
+```
+
+
+
+
+
+
+

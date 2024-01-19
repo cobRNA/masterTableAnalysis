@@ -1,0 +1,325 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+# Read modules
+```{r}
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(purrr)
+library(stringr)
+```
+
+
+# Read data from tsv file
+```{r}
+# Read targets from targetDesign file
+# Data contains the header
+read.table(file = '~/Desktop/mT/new-masterTable/Hv3_CLS3_targetDesign.tsv', sep = '\t', header = TRUE) %>% 
+  as_tibble() -> df_targets
+df_targets
+
+
+# Read targets from masterTable with transcript_ids
+# Data contains the header
+read.table(file = '~/Desktop/mT/new-masterTable/targets_Hv3_mT.tsv', sep = '\t', header = TRUE) %>% 
+  as_tibble() -> df_mT
+df_mT
+
+
+# Read transcripts from concatenated catalogues file
+# Data DO NOT contain the header
+read.table(file = '~/Desktop/mT/new-masterTable/Catalogues/concat_catalogues.tsv', sep = '\t', header = FALSE) %>% 
+  as_tibble() %>% 
+  rename(transcript_id=V1,
+         catalogue=V2)-> df_catalogues
+df_catalogues
+
+
+```
+
+# Check number of targets for ea catalogue (lncRNA only)
+```{r}
+#pdf(file = "N_targets_per_catalogue.pdf", width = 8, height = 4)
+df_targets %>% 
+  filter(target_category=="longNonCoding") %>% 
+  group_by(target_set) %>% 
+  summarise(count=n()) %>% 
+  ggplot(aes(x = reorder(target_set, -count), y = count, fill=target_set)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = scales::comma(count)),
+            position = position_dodge(width=0.9),
+            vjust=-0.25,
+            size = 3.5) +
+  ylab('Number of targets') +
+  ggtitle(label = "Number of lncRNA targets for each catalogue") +
+  theme_minimal() +
+  #scale_fill_brewer(palette="Paired") +
+  theme(axis.title.x=element_blank(),
+        axis.text = element_text(colour = "black", size = 11),
+        axis.ticks = element_line(colour = "black"),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.position = "none",
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5, size=11)
+        ) -> p_targeted_catalogues
+
+p_targeted_catalogues
+```
+# Number of (lncRNA) targets detected in masterTable - DETECTED/UNDETECTED
+```{r}
+df_targets %>% 
+  filter(target_category=="longNonCoding") %>% 
+  select(target_id, target_set) %>% 
+  left_join(x=.,
+            y=(df_mT %>%
+                 distinct(target) %>% 
+                 mutate(status="detected")),
+            by=join_by(target_id==target)) %>% 
+  replace(is.na(.), "undetected") %>%
+  summarise(count=n(), .by=c(target_set, status)) %>% 
+  ggplot(data=.,aes(x=target_set,
+                    y=count,
+                    fill=status)) +
+  geom_bar(stat="identity", position=position_dodge())
+```
+
+# Number of (lncRNA) targets detected in masterTable - TOTAL/DETECTED
+```{r}
+#pdf(file = "N_detected_targets.pdf", width = 8, height = 4)
+df_targets %>% 
+  filter(target_category=="longNonCoding") %>% 
+  select(target_id, target_set) %>% 
+  inner_join(x=.,
+            y=(df_mT %>%
+                 distinct(target) %>% 
+                 mutate(status="detected")),
+            by=join_by(target_id==target)) %>%
+  summarise(count=n(), .by=c(target_set, status)) %>% 
+  rbind(df_targets %>% 
+          filter(target_category=="longNonCoding") %>% 
+          select(target_id, target_set) %>%
+          summarise(count=n(), .by=c(target_set)) %>%
+          mutate(status="targeted")) %>%
+  rbind(df_catalogues %>%
+          summarise(count=n(), .by=c("catalogue")) %>% 
+          rename(target_set=catalogue) %>% 
+          mutate(status="all")) %>% 
+  ggplot(data=.,aes(x=reorder(target_set, -count),
+                    y=count,
+                    fill=reorder(status, -count))) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_text(aes(label = paste0(round((count/1000), digits=0), " K")),     #scales::comma(count)),
+          position = position_dodge(width=0.9),
+          vjust=-0.25,
+          size = 2.9) +
+  theme_minimal() +
+  ylab('Number of targets') +
+  ggtitle(label = "Number of lncRNA targets for each catalogue") +
+  scale_fill_brewer(palette="Blues", direction = -1) +
+  theme(axis.title.x=element_blank(),
+        axis.text = element_text(colour = "black", size = 11),
+        axis.ticks = element_line(colour = "black"),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        legend.title = element_blank(),
+        legend.position = c(0.9, 0.9),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5, size=11)
+        ) +
+  scale_y_continuous()
+  #scale_y_continuous(labels = scales::label_number(suffix = " K", scale = 1e-3))
+```
+
+# Targeted/detected chart
+```{r}
+#pdf(file = "detected_targets_percent.pdf", width = 8, height = 4)
+df_targets %>% 
+  filter(target_category=="longNonCoding") %>% 
+  select(target_id, target_set) %>% 
+  inner_join(x=.,
+            y=(df_mT %>%
+                 distinct(target) %>% 
+                 mutate(status="detected")),
+            by=join_by(target_id==target)) %>%
+  summarise(count=n(), .by=c(target_set, status)) %>% 
+  rbind(df_targets %>% 
+          filter(target_category=="longNonCoding") %>% 
+          select(target_id, target_set) %>%
+          summarise(count=n(), .by=c(target_set)) %>%
+          mutate(status="targeted")) %>%
+  group_by(target_set) %>% 
+  mutate(percentage=count/max(count)) %>% 
+  ggplot(data=.,aes(x=reorder(target_set, -count),
+                    y=count,
+                    fill=reorder(status, -count))) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_text(aes(label = paste0(scales::comma(count), "\n(",  scales::percent(percentage), ")")),
+          position = position_dodge(width=0.9),
+          vjust=-0.25,
+          size = 2.9) +
+  theme_minimal() +
+  ylab('Number of targets') +
+  ggtitle(label = "Number of lncRNA targets for each catalogue") +
+  scale_fill_brewer(palette="Blues", direction = -1) +
+  theme(axis.title.x=element_blank(),
+        axis.text = element_text(colour = "black", size = 11),
+        axis.ticks = element_line(colour = "black"),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        legend.title = element_blank(),
+        legend.position = c(0.9, 0.9),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5, size=11)
+        ) +
+  scale_y_continuous(limits = c(0, 150000), labels=scales::comma)
+```
+
+# Targeted/detected chart - ale z naciskiem na %
+```{r}
+#pdf(file = "N_detected_targets_percent2.pdf", width = 8, height = 4)
+df_targets %>% 
+  filter(target_category=="longNonCoding") %>% 
+  select(target_id, target_set) %>% 
+  inner_join(x=.,
+            y=(df_mT %>%
+                 distinct(target) %>% 
+                 mutate(status="detected")),
+            by=join_by(target_id==target)) %>%
+  summarise(count=n(), .by=c(target_set, status)) %>% 
+  rbind(df_targets %>% 
+          filter(target_category=="longNonCoding") %>% 
+          select(target_id, target_set) %>%
+          summarise(count=n(), .by=c(target_set)) %>%
+          mutate(status="targeted")) %>%
+  group_by(target_set) %>% 
+  mutate(percentage=count/max(count)) %>% 
+  ggplot(data=.,aes(x=reorder(target_set, -percentage),
+                    y=percentage,
+                    fill=reorder(status, -count))) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_text(aes(label = paste0(scales::percent(percentage), "\n(", scales::comma(count), ")")),
+          position = position_dodge(width=0.9),
+          vjust=-0.25,
+          size = 2.9) +
+  theme_minimal() +
+  ylab('Percentage') +
+  ggtitle(label = "Targeted to detected ration for each catalogue") +
+  scale_fill_brewer(palette="Blues", direction = -1) +
+  theme(axis.title.x=element_blank(),
+        axis.text = element_text(colour = "black", size = 11),
+        axis.ticks = element_line(colour = "black"),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        legend.title = element_blank(),
+        legend.position = "top",  #c(0.9, 0.9),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5, size=11)
+        ) +
+  scale_y_continuous(breaks = c(0, 0.25, 0.50, 0.75, 1.00), limits = c(0, 1.11), labels=scales::percent)
+```
+
+
+
+# Junk below
+## Fajny wykres, ale nie o to chodziło
+```{r}
+#pdf(file = "detected_targets.pdf", width = 8, height = 4)
+df_targets %>% 
+  filter(target_category=="longNonCoding") %>% 
+  select(target_id, target_set) %>% 
+  inner_join(x=.,
+            y=(df_mT %>%
+                 distinct(target) %>% 
+                 mutate(status="detected")),
+            by=join_by(target_id==target)) %>%
+  select(target_set, status) %>% 
+  #summarise(count=n(), .by=c(target_set, status)) %>% 
+  rbind(df_targets %>% 
+          filter(target_category=="longNonCoding") %>% 
+          mutate(status="targeted") %>%
+          select(target_set, status)) %>%
+          #summarise(count=n(), .by=c(target_set)) %>%
+  ggplot(data=.,aes(x=as.factor(target_set),
+                    fill=as.factor(status))) +
+  geom_bar(aes( y=..count../tapply(..count.., ..x.. ,sum)[..x..]), position="dodge") +
+  geom_text(aes( y=..count../tapply(..count.., ..x.. ,sum)[..x..], label=scales::percent(..count../tapply(..count.., ..x.. ,sum)[..x..])),
+          stat = "count",
+          position = position_dodge(width=0.9),
+          vjust=-0.25,
+          size = 2.9) +
+  theme_minimal() +
+  ylab('Number of targets') +
+  ggtitle(label = "Number of lncRNA targets for each catalogue") +
+  scale_fill_brewer(palette="Blues", direction = -1) +
+  theme(axis.title.x=element_blank(),
+        axis.text = element_text(colour = "black", size = 11),
+        axis.ticks = element_line(colour = "black"),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        legend.title = element_blank(),
+        legend.position = c(0.9, 0.9),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5, size=11)
+        ) +
+  scale_y_continuous(labels = scales::percent)
+
+
+# ggplot(mtcars, aes(x=as.factor(cyl), fill=as.factor(gear)))+
+#   geom_bar(aes( y=..count../tapply(..count.., ..x.. ,sum)[..x..]), position="dodge" ) +
+#   geom_text(aes( y=..count../tapply(..count.., ..x.. ,sum)[..x..], label=scales::percent(..count../tapply(..count.., ..x.. ,sum)[..x..]) ),
+#             stat="count", position=position_dodge(0.9), vjust=-0.5)
+  
+
+```
+
+
+
+
+
+
+```{r}
+df_targets %>% 
+  filter(target_category=="longNonCoding") %>%
+  select(target_id, target_set) %>% 
+  filter(target_set=="gencodeLncRna+")
+```
+
+
+
+
+
+
+```{r}
+df_targets %>% 
+  filter(target_category=="longNonCoding") %>% 
+  select(target_category, target_set) %>% 
+  distinct(target_set)
+```
+
+```{r}
+df_mT %>%
+  distinct(target) %>% 
+  nrow()
+```
+
+
+
+```{r}
+df_targets %>% 
+  filter(target_category=="longNonCoding") %>% 
+  select(target_id, target_set) %>% 
+  left_join(x=., y=df_mT, by=join_by(target_id==target)) %>% 
+  # group_by(target_set) %>% 
+  # summarise(count=n())
+  
+  df_targets %>% 
+  filter(target_category=="longNonCoding") %>% 
+  group_by(target_set) %>% 
+  summarise(count=n()) %>% 
+  rename(catalog = target_set) %>% 
+  mutate(type="targeted")
+  
+```
+
