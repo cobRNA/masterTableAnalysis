@@ -1,0 +1,498 @@
+#####
+SCRIPTS LOCALIZATION:
+R:	/home/tomasz/Tomasz/Projects/R/masterTable
+Python: /home/tomasz/Tomasz/Projects/Python/masterTable/mT_contribution.py
+	/home/tomasz/Tomasz/Projects/Python/masterTable/mT_sample_stats.py
+	/home/tomasz/Tomasz/Projects/Python/masterTable/mT_stats.py
+#####
+
+######
+### REVISED FOR NEW mT VERSION (30 Nov 2023)
+######
+
+mT is now zipped.
+I extracted it and gziped for backwards commands compatibility.
+Renamed created gz archive to Hv3_masterTable.gtf.gz (same as previous .gz and .zip now)
+
+#######################################################################################
+############################## Full masterTable analysis ##############################
+#######################################################################################
+
+
+1. For masterTable analysis we need to extract only transcipts from masterTable:
+zcat Hv3_masterTable.gtf.gz | awk '$3=="transcript"' > trans_Hv3_masterTable.gtf
+# trans_Hv3_masterTable.gtf file will be also used in RNA-slice masterTable analysis
+
+2. Reformat masterTable using mt_stats.py, so it would be easier to analyze using R
+cat trans_Hv3_masterTable.gtf | ~/Tomasz/Projects/Python/masterTable/mt_stats.py > formatted_Hv3_mT.tsv
+# File contains header!
+# Created 2 plots: targeted vs non-targeted and catalog contribution (ALL_mT_Hv3_stats.Rmd)
+
+
+3. Statistics for samples
+To get some statistics I used previously created slice of masterTable containing only transcripts (trans_Hv3_masterTable.gtf)
+Using PYTHON I extracted sample ids, put them in separated line and replace them with full metadata from Hv3_sample_Coding file.
+@EDIT: Transcript_id added for future analyses
+cat trans_Hv3_masterTable.gtf | ~/Tomasz/Projects/Python/masterTable/mt_sample_stats.py > ALL_mT_Hv3_sample_stats.tsv
+
+# Plotting the results - ALL_mT_Hv3_stats.Rmd
+
+4. Comparing number of transcripts: ALL_mT vs RNA_mT
+   For this analysis I used formatted_Hv3_mT.tsv (as ALL_mT) and formatted_RNA_Hv3_mT.tsv (created using mt_stats.py on RNA_Hv3_masterTable.gtf; as RNA_mT)
+
+
+# Plotting the results - ALL_mT_Hv3_stats.Rmd
+
+
+
+5. Sample data validation
+# To validate results for mT sample analysis (heatmaps of common transcipts between tissues) I wanted to check how many
+# transcipts are assigned to more than 1 sample
+# I performed with analysis in R using formatted_Hv3_mT.tsv but to be rly sure I also used BUR's bash script extract.gtf.tags.sh 
+# on pure mT file (Hv3_masterTable.gtf.gz):
+zcat Hv3_masterTable.gtf.gz | awk '$3=="transcript"' | ./extract.gtf.tags.sh - transcript_id,sampleN > ALL_mT_Hv3_transcript-sampleN.tsv
+# Results are the same :)
+
+
+#######################################################
+Hv3_SPLICEDMASTERTABLE
+
+1.
+cat Hv3_splicedmasterTable.gtf | awk '$3=="transcript"' > trans_Hv3_splicedmasterTable.gtf
+
+2. 
+cat trans_Hv3_splicedmasterTable.gtf | ~/Tomasz/Projects/Python/masterTable/mt_ic_stats.py > formatted_Hv3_ICmT.tsv
+
+3.
+cat trans_Hv3_splicedmasterTable.gtf | ~/Tomasz/Projects/Python/masterTable/mt_sample_stats.py > ALL_ICmT_Hv3_sample_stats.tsv
+
+
+THE SAME BUT FOR RNA SLICE
+cat ./mT_RNA_using_IC/RNA_Hv3_splicedmasterTable.gtf | ~/Tomasz/Projects/Python/masterTable/mt_ic_stats.py > formatted_RNA_Hv3_ICmT.tsv
+
+
+cat ./mT_RNA_using_IC/RNA_Hv3_splicedmasterTable.gtf | ~/Tomasz/Projects/Python/masterTable/mt_sample_stats.py > RNA_ICmT_Hv3_sample_stats.tsv
+
+
+
+
+
+
+
+
+
+#######################################################################################
+########################### RNA-slice masterTable analysis ############################
+#######################################################################################
+#######################################################################################
+################################### Using bedtools ####################################
+#######################################################################################
+1. Convert table from gtf to bed6 (chr|start|stop|chr;start;stop;strand;transcript_id;metadata|0|strand)
+zcat Hv3_masterTable.gtf.gz | awk '$1~/^chr/' | awk '$3 == "transcript"' | awk '{print $1"\t"$4-1"\t"$5"\t"$1";"$4-1";"$5";"$7";"$12";"$26"\t"$6"\t"$7}' | sed 's/\"//g; s/;;/;/g' > Hv3_masterTable.bed
+
+Note: - patches were filtered out
+      - remember to subtract 1 from start pos
+      - include only transcript
+      - include link to metadata (not needed rn)
+
+2. Bedtools intersect (USING ONLY lnc_RNA catalogues! - pc and pcConf excluded)
+# keep only unique intersecting transcripts from MasterTable.bed
+
+bedtools intersect -wa -wb -a Hv3_masterTable.bed -b ./Catalogues/bigtrans.hg38.bed12 ./Catalogues/cls.hg38.bed12 ./Catalogues/clsFL.hg38.bed12 ./Catalogues/fantomCat.hg38.bed12 ./Catalogues/gen.hg38.bed12 ./Catalogues/mitrans.hg38.bed12 ./Catalogues/noncode.hg38.bed12 ./Catalogues/refseq.hg38.bed12 -u -s > RNA_Hv3_mT.out
+
+# Now, we have transcripts originating from MasterTable but only related with selected lncRNA catalogues
+# We have to convert the starting positions from .bed to gtf format for further data transformations.
+
+3. Correct starting possions:
+cat RNA_Hv3_mT.out | awk '{print $1"\t"$2+1"\t"$3"\t"$4"\t"$5"\t"$6}' > corr_RNA_Hv3_mT.out
+
+4. To be able to compare selected transcripts from corr_RNA_Hv3_mT.out we need to transform original Hv3_masterTable.gtf file
+   so it would only contain transcripts (exons out)
+   This step is the same as for full masterTable analysis
+zcat Hv3_masterTable.gtf.gz | awk '$3=="transcript"' > trans_Hv3_masterTable.gtf
+
+
+# Now, all we need to do is to INNER JOIN both files (corr_RNA_Hv3_mT.out and trans_Hv3_masterTable.gtf) and take from the second file (trans_Hv3_masterTable.gtf)
+only transcripts that match lncRNA related transcripts listed in the corr_RNA_Hv3_mT.out
+
+5. Creating lncRNA related masterTable slice
+awk -F'\t' 'NR==FNR{check[$1$2$3$5$6];next} $1$4$5$6$7 in check' ./corr_RNA_Hv3_mT.out ./trans_Hv3_masterTable.gtf > RNA_Hv3_masterTable.gtf
+
+# To be sure, that everyting is alright, we can compare amount of transcripts from corr_RNA_Hv3_mT.out and created output file (RNA_Hv3_masterTable.gtf)
+# Both files should have the same amount of transcripts.
+wc -l RNA_Hv3_masterTable.gtf corr_RNA_Hv3_mT.out 
+    809129 RNA_Hv3_masterTable.gtf
+    809129 corr_RNA_Hv3_mT.out
+   1618258 total
+
+
+# For easier data transformation and analysis in R, I converted the RNA mT slice into tsv format
+# (similarly to step 2 for full mT)
+6. Reformat masterTable RNA slice using mT_stats.py, so it would be easier to analyze using R
+cat RNA_Hv3_masterTable.gtf | ~/Tomasz/Projects/Python/masterTable/mt_stats.py > formatted_RNA_Hv3_mT.tsv
+# File contains header!
+
+
+
+# Now, we need to once more transform the data to determine:
+- contribution of each catalogue into the mT
+- statictics for samples (by tissue, technology, stage and capture status)
+
+7. Statistics for samples
+To get some statistics I used previously created slice of masterTable with lncRNA transcripts (RNA_Hv3_masterTable.gtf)
+Using PYTHON I extracted sample ids, put them in separated line and replace them with full metadata from Hv3_sample_Coding file.
+@EDIT: Transcript_id added for future analyses
+cat RNA_Hv3_masterTable.gtf | ~/Tomasz/Projects/Python/masterTable/mt_sample_stats.py > RNA_mT_Hv3_sample_stats.tsv
+
+# Plotting the results - RNA_mT_Hv3_stats.Rmd
+
+
+8. Statistics for catalogues
+To study statistics for targeted catalogues I needed to download primary_targets file.
+There are 2 sources:
+a) https://public-docs.crg.es/rguigo/lncRNA_review/tmp/TM/Hv3_primary_targets.exons.reduced.gene_type.segments.gtf
+b) https://github.com/guigolab/gencode-cls-master-table/releases/download/Supplementary/Hv3_CLS3_targetDesign.gtf.gz
+
+I used the latter from project site.
+Both has the same amount of lines but b) is a little richer with data (rather unusefull).
+# For easy analysis in R I prepared tsv file WITH HEADER using mt_catalogues_stats.py python script.
+# I did not touch positions - they are still in gtf format (not in bed)
+
+zcat Hv3_CLS3_targetDesign.gtf.gz | ~/Tomasz/Projects/Python/masterTable/mt_catalogues_stats.py > Hv3_CLS3_targetDesign.tsv
+
+To determine contribution of ea catalogue into mT I needed to extract their transcript_ids from catalogue files.
+I created one headerless file: transcipt_id | catalogue
+Using below commands:
+
+cat mitrans.hg38.bed12 | awk '{print$4"\tmiTranscriptome"}' > concat_catalogues.tsv
+cat noncode.hg38.bed12 | awk '{print$4"\tNONCODE"}' >> concat_catalogues.tsv
+
+#cat gen.hg38.bed12 | awk '{print$4"\tgencodeLncRna+"}' >> concat_catalogues.tsv
+Should be:
+cat gen.hg38.bed12 cls.hg38.bed12 | awk '{print$4"\tgencodeLncRna+"}' | sort | uniq >> concat_catalogues.tsv
+
+cat bigtrans.hg38.bed12 | awk '{print$4"\tbigTranscriptome"}' >> concat_catalogues.tsv
+cat fantomCat.hg38.bed12 | awk '{print$4"\tfantomCat"}' >> concat_catalogues.tsv
+cat refseq.hg38.bed12 | awk '{print$4"\trefSeq"}' >> concat_catalogues.tsv
+
+There are only 6 catalogues in target file. But I got 8 catalogs from Basia. clsFL and cls are missing from target.
+@EDIT
+They are missing, cuz they were included in gencodeLncRna+
+Also: clsFL is fully included in cls, so no need to concatenate this catalogue.
+CAUTION NOTE: After concatenating content of gen.hg38 and cls DUPLICATES must be removed!
+
+To add cls into previously created concat_catalogues.tsv file I used this command:
+cat cls.hg38.bed12 | awk '{print $4"\tgencodeLncRna+"}' | cat - concat_catalogues.tsv | sort | uniq > new_concat_catalogues.tsv
+And renamed the file to concat_catalogues.tsv
+
+
+#######################################################################################
+################################### Using targets #####################################
+#######################################################################################
+
+1. I used mT slice containing only transcripts: trans_Hv3_masterTable.gtf
+
+2. Read only target_ids from Hv3_CLS3_targetDesign.gtf.gz that are linked to longNonCodin, remove trailing and leading " and ;
+   and save them to separate file.
+   zcat Hv3_CLS3_targetDesign.gtf.gz | grep 'longNonCoding' | awk '{print $10}' | sed 's/"//g' | sed 's/;//g' > lncRNA_target_ids
+   zcat Hv3_CLS3_targetDesign.gtf.gz | grep 'putative' | awk '{print $10}' | sed 's/"//g' | sed 's/;//g' > putative_target_ids
+
+@ EDIT for the future I concatenated both files and created 
+cat putative_target_ids lncRNA_target_ids > putative+rna_target_ids
+
+3. Pass target_ids and trans_Hv3_splicedmasterTable.gtf files as arguments into the python script
+
+lncRNA + putative (LP) (roboczo folder all_mt_slice):
+~/Tomasz/Projects/Python/masterTable/mt_rna_slice_by_target3.py trans_Hv3_masterTable.gtf putative+rna_target_ids > p+rna_all_mt_slice
+
+
+
+#######################################################################################
+################################ INTRON CHAIN mT based ################################
+########################### RNA-slice masterTable analysis ############################
+#######################################################################################
+################################### Using bedtools ####################################
+#######################################################################################
+1. Convert table from gtf to bed6 (chr|start|stop|chr;start;stop;strand;transcript_id;metadata|0|strand)
+cat Hv3_splicedmasterTable.gtf | awk '$1~/^chr/' | awk '$3 == "transcript"' | awk '{print $1"\t"$4-1"\t"$5"\t"$1";"$4-1";"$5";"$7";"$12";"$26"\t"$6"\t"$7}' | sed 's/\"//g; s/;;/;/g' > Hv3_splicedmasterTable.bed
+
+Note: - patches were filtered out
+      - remember to subtract 1 from start pos
+      - include only transcript
+      - include link to metadata (not needed rn)
+
+2. Bedtools intersect (USING ONLY lnc_RNA catalogues! - pc and pcConf excluded)
+# keep only unique intersecting transcripts from MasterTable.bed
+
+bedtools intersect -wa -wb -a Hv3_splicedmasterTable.bed -b ./Catalogues/bigtrans.hg38.bed12 ./Catalogues/cls.hg38.bed12 ./Catalogues/clsFL.hg38.bed12 ./Catalogues/fantomCat.hg38.bed12 ./Catalogues/gen.hg38.bed12 ./Catalogues/mitrans.hg38.bed12 ./Catalogues/noncode.hg38.bed12 ./Catalogues/refseq.hg38.bed12 -u -s > RNA_Hv3_ICmT.out
+
+# Now, we have transcripts originating from MasterTable but only related with selected lncRNA catalogues
+# We have to convert the starting positions from .bed to gtf format for further data transformations.
+
+3. Correct starting possions:
+cat RNA_Hv3_ICmT.out | awk '{print $1"\t"$2+1"\t"$3"\t"$4"\t"$5"\t"$6}' > corr_RNA_Hv3_ICmT.out
+
+4. To be able to compare selected transcripts from corr_RNA_Hv3_mT.out we need to transform original Hv3_masterTable.gtf file
+   so it would only contain transcripts (exons out)
+   This step is the same as for full masterTable analysis
+cat Hv3_splicedmasterTable.gtf | awk '$3=="transcript"' > trans_Hv3_splicedmasterTable.gtf
+
+
+# Now, all we need to do is to INNER JOIN both files (corr_RNA_Hv3_mT.out and trans_Hv3_masterTable.gtf) and take from the second file (trans_Hv3_masterTable.gtf)
+only transcripts that match lncRNA related transcripts listed in the corr_RNA_Hv3_mT.out
+
+5. Creating lncRNA related masterTable slice
+awk -F'\t' 'NR==FNR{check[$1$2$3$5$6];next} $1$4$5$6$7 in check' ./corr_RNA_Hv3_ICmT.out ./trans_Hv3_splicedmasterTable.gtf > RNA_Hv3_splicedmasterTable.gtf
+
+# To be sure, that everyting is alright, we can compare amount of transcripts from corr_RNA_Hv3_mT.out and created output file (RNA_Hv3_splicedmasterTable.gtf)
+# Both files should have the same amount of transcripts.
+wc -l RNA_Hv3_splicedmasterTable.gtf corr_RNA_Hv3_ICmT.out 
+    809129 RNA_Hv3_masterTable.gtf
+    809129 corr_RNA_Hv3_mT.out
+   1618258 total
+
+
+#######################################################################################
+################################### Using targets #####################################
+#######################################################################################
+
+Catalog: Target_slicing/
+
+1. I used ICmT slice containing only transcripts: trans_Hv3_splicedmasterTable.gtf
+
+2. Read only target_ids from Hv3_CLS3_targetDesign.gtf.gz that are linked to longNonCodin, remove trailing and leading " and ;
+   and save them to separate file.
+   zcat Hv3_CLS3_targetDesign.gtf.gz | grep 'longNonCoding' | awk '{print $10}' | sed 's/"//g' | sed 's/;//g' > lncRNA_target_ids
+   zcat Hv3_CLS3_targetDesign.gtf.gz | grep 'putative' | awk '{print $10}' | sed 's/"//g' | sed 's/;//g' > putative_target_ids
+
+@ EDIT for the future I concatenated both files and created 
+cat putative_target_ids lncRNA_target_ids > putative+rna_target_ids
+
+3. Pass target_ids and trans_Hv3_splicedmasterTable.gtf files as arguments into the python script
+
+lncRNA (L)
+~/Tomasz/Projects/Python/masterTable/mt_rna_slice_by_target3.py trans_Hv3_splicedmasterTable.gtf lncRNA_target_ids > TL_RNA_Hv3_splicedmasterTable.gtf
+
+putative (P)
+~/Tomasz/Projects/Python/masterTable/mt_rna_slice_by_target3.py trans_Hv3_splicedmasterTable.gtf putative_target_ids > TP_RNA_Hv3_splicedmasterTable.gtf
+
+# For further analyses concatenated both files and remove duplicated transcripts
+cat TL_RNA_Hv3_splicedmasterTable.gtf TP_RNA_Hv3_splicedmasterTable.gtf | sort | uniq > T_RNA_Hv3_splicedmasterTable.gtf
+
+4. Reformat resulting intron chain masterTable RNA slice using mt_ic_stats.py, so it would be easier to analyze using R
+cat T_RNA_Hv3_splicedmasterTable.gtf | ~/Tomasz/Projects/Python/masterTable/mt_ic_stats.py > formatted_T_RNA_Hv3_ICmT.tsv
+# File contains header!
+
+5. Statistics for samples
+To get some statistics I used previously created slice of masterTable with lncRNA transcripts (T_RNA_Hv3_splicedmasterTable.gtf)
+Using PYTHON I extracted sample ids, put them in separated line and replace them with full metadata from Hv3_sample_Coding file.
+@EDIT: Transcript_id added for future analyses
+cat T_RNA_Hv3_splicedmasterTable.gtf | ~/Tomasz/Projects/Python/masterTable/mt_sample_stats.py > T_RNA_ICmT_Hv3_sample_stats.tsv
+
+
+
+
+
+
+
+# Junk below
+~/Tomasz/Projects/Python/masterTable/mt_RNA_slice_by_target.py -i trans_Hv3_splicedmasterTable.gtf -t target_ids > RNA_slice
+
+It appears that 1 transcript from ICmT could be targeted by multiple target_ids -> RNA_slice is bigger than inputted ICmT
+   Removal of duplicated entries is required.
+   With removal of duplicated entries It goes rly slow. I need to find another way.
+   Maybe acquire transcript_ids of interest this way:
+   a) use formatted_Hv3_ICmT.tsv and find transcript IDs using inner join with target_id
+   b) use inner join to join full table with acuired transcript_ids
+   c) ?
+   d) profit!
+
+awk -F'\t' 'NR==FNR{check[$6];next} $1 in check' ./formatted_Hv3_ICmT.tsv ./target_ids > RNA_Hv3_ICmT_transcriptsIDs
+	
+
+
+cat target_ids | sed 's/"//g' | sed 's/;//g' > clean_target_ids
+
+
+#######################################################################################
+############################# Random but usefull stuff ################################
+#######################################################################################
+############################# Tmerging ICmT RNA slices ################################
+#######################################################################################
+
+#################### Tmerging RNA slice from bedtools intersect #######################
+#######################################################################################
+
+catalogue: /tmerge
+
+1. Some catalogs (cls.hg38 and gen.hg38) had not unique transcript ids which was a problem for tmerge
+   I converted them to gtf using bed12togff script and then modified transcript_ids (transcript_id.chr.start.stop.strand) using mt_fix_transcript_ids.py script
+   
+   cat cls.hg38.bed12 gen.hg38.bed12 | ./bed12togff | ~/Tomasz/Projects/Python/masterTable/mt_fix_transcript_ids.py > lncrna_catalogues.gtf
+ 
+
+2. Concatenated rest of the lnc-RNA catalaogues into one, converted them to gtf and add to already existing lncrna_catalogues.gtf file:
+
+cat bigtrans.hg38.bed12 fantomCat.hg38.bed12 mitrans.hg38.bed12 noncode.hg38.bed12 refseq.hg38.bed12 | ./bed12togff >> lncrna_catalogues.gtf 
+
+3. Sorted lncrna_catalogues.gtf file by chr | start | stop positions
+cat lncrna_catalogues.gtf | sort -k1,1n -k4,4n -k5,5n > sorted_lncrna_catalogues.gtf 
+
+
+4. Run tmerge:
+cat sorted_lncrna_catalogues.gtf | ./tmerge - > tmerged_sorted_lcnrna_catalogues.gtf
+
+
+5. Build loci using buildLoci.pl script (https://github.com/julienlag/buildLoci) as described on GitHub
+
+bedtools intersect -s -wao -a tmerged_sorted_lcnrna_catalogues.gtf -b tmerged_sorted_lcnrna_catalogues.gtf | ./buildLoci.pl - > t_s_lncrna_cat.loci.gff
+
+
+##### Tmerging with  RNA slice of intron chain masterTable (Hv3_splicedmasterTable.gtf)
+
+1. Prepare new RNA slice of intron chain masterTable
+Perparation is described above and is similar as for full mT
+resulting slice:
+RNA_Hv3_splicedmasterTable.gtf
+
+2. As I filtered out chromosomes other than chr1-22 and chrX and chrY from mT slice I also:
+- filtered it out from tmerged catalogues,
+- concatenated with RNA mT slice,
+- sorted and
+- tmerged
+
+cat t_s_lncrna_cat.loci.gff | awk '$1~/^chr.$/ || $1~/^chr..$/' | awk '$1!~/chrM/' | cat - RNA_Hv3_splicedmasterTable.gtf | sort -k1,1 -k4,4n -k5,5n | ./tmerge - > tmerged_RNA_ICmT_and_catalogs.gtf
+
+3. Build loci using buildLoci.pl script (https://github.com/julienlag/buildLoci) as described on GitHub
+bedtools intersect -s -wao -a tmerged_RNA_ICmT_and_catalogs.gtf -b tmerged_RNA_ICmT_and_catalogs.gtf | ./buildLoci.pl - > tmerged_RNA_ICmT_and_catalogs.loci.gff
+
+
+
+#################### Tmerging RNA slice from targets ##################################
+#######################################################################################
+catalogue: /tmerge_target_slice
+
+I used tmerged catalogues from above - t_s_lncrna_cat.loci.gff
+
+1. Prepare new RNA slice of intron chain masterTable using targets
+Perparation is described above
+resulting slice:
+T_RNA_Hv3_splicedmasterTable.gtf
+
+2. As I filtered out chromosomes other than chr1-22 and chrX and chrY from mT slice I also:
+- filtered it out from tmerged catalogues,
+- concatenated with RNA mT slice,
+- sorted and
+- tmerged
+
+cat t_s_lncrna_cat.loci.gff | awk '$1~/^chr.$/ || $1~/^chr..$/' | awk '$1!~/chrM/' | cat - T_RNA_Hv3_splicedmasterTable.gtf | sort -k1,1 -k4,4n -k5,5n | ./tmerge - > tmerged_T_RNA_ICmT_and_catalogs.gtf
+
+3. Build loci using buildLoci.pl script (https://github.com/julienlag/buildLoci) as described on GitHub
+bedtools intersect -s -wao -a tmerged_T_RNA_ICmT_and_catalogs.gtf -b tmerged_T_RNA_ICmT_and_catalogs.gtf | ./buildLoci.pl - > tmerged_T_RNA_ICmT_and_catalogs.loci.gff
+
+
+
+
+
+
+
+
+
+
+
+# junk?
+
+1. Tmerge previously build t_s_lncrna_cat.loci.gff with masterTable
+cat Hv3_splicedmasterTable.gtf t_s_lncrna_cat.loci.gff | sort -k1,1 -k4,4n -k5,5n | ./tmerge - > tmerged_mT-IC_and_catalogs.gtf
+
+
+
+
+
+
+
+
+3. Converting bed12 to gtf format and sort by chr and startpos AND TAKE ONLY chr1-21 + chrX + chrY + chrM
+cat lncrna_catalogues.bed12 | ./bed12togff |  awk '$1~/chr.$/ || $1~/chr..$/' | sort -k1,1n -k4,4n > lncrna_catalogues.gtf
+
+
+
+
+
+
+
+
+
+
+
+JUNK BELOW
+8. Determining the catalogue contribution
+# check names of the catalogues
+cat RNA_Hv3_masterTable.gtf | awk '{print $14}' | tr ',' '\n' | sed 's/\"//g ; s/;//g' | awk -F'.' '{print $1}' | awk '!seen[$0]++'
+# there are more catalogues that we used during the bedtools intersect
+# nearly HALF of the transcripts are not linked to any catalogue (look for: grep 'target ""')
+# also, there are multiple catalogues linked to single transcript
+
+Use mT_contribution.py to transform RNA_Hv3_MasterTable.gtf into transcript_id | catalogue_name file
+cat RNA_Hv3_masterTable.gtf | ~/Tomasz/Projects/Python/scripts/mT_contribution.py > RNA_mT_Hv3_contribution.tsv
+Unfortunately I have no idea what to do with transcripts linked to none of the catalogue.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+############################## JUNK BELOW ########################
+
+3. Recreate lost MasterTable data by intersecting RNA_Hv3_mT.out with full MasterTable
+bedtoold intersect -a Hv
+
+
+
+4. Create formatted file that contains only necessary info: chr|pos1|pos2|strand|transcript_id|metadatacode,metadatacode|catalog|gene_id
+cat RNA_Hv3_mT.out | awk '{print $4$7";"$11}' | sed 's/;/\t/g' > formatted_RNA_Hv3_mT.out
+
+-----------------------------------
+--- DATA ANALYSIS ---
+-----------------------------------
+
+I created small Python3 script to split rows with multiple metadata links and than substitute sample code with full sample info from metadata file (Hv3_sampleCoding)
+cat formatted_RNA_Hv3_mT.out | ~/Tomasz/Projects/Python/scripts/m_table.py > sample_RNA_Hv3.out
+
+script is also available in master_table directory
+
+
+zcat Hv3_masterTable.gtf.gz | grep 'anchTM_000000685355' | awk '$3=="transcript"' | awk '{print $26}' | sed 's/\"//g ; s/;//g ; s/,/\n/g' | awk '!seen[$0]++' | wc -l
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
