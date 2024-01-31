@@ -1,4 +1,10 @@
+# Junk files and directories
 Random/
 notes
 test.py
 mt_rna_slice_by_target_single.py
+
+
+
+# Too large for GitHub but important files
+/Data/Others/hg38.polyAsignals.bed
