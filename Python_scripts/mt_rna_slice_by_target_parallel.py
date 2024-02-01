@@ -83,25 +83,31 @@ def find_transcripts(targets, transcripts, output_filename):
     file.close()
 
 
-def join_output(list_of_filenames):
-    joined_output = set()
+def concat_output(list_of_filenames):
+    concat_output = set()
+    concat_file_name = "concatenated_output.txt"
     for file_name in list_of_filenames:
         with open(file_name, "r", encoding="utf-8") as file:
-            joined_output.union(set(file.read().split(sep="\n")))
+            concat_output.union(set(file.read().split(sep="\n")))
 
     # Write output to file
-    with open(f"{config['dir']}/joined_output", "w", encoding="utf-8") as file:
-        file.write("\n".join(joined_output))
+    with open(
+        os.path.join(config["dir"], concat_file_name), "w", encoding="utf-8"
+    ) as file:
+        file.write("\n".join(concat_output))
+
+    # Repot status
+    print("Completed.")
+    print(
+        f"Concatenated output file location: {os.path.join(config['dir'], concat_file_name)}"
+    )
 
 
 if __name__ == "__main__":
     # Check whether the specified path exists or not
     if os.path.exists(config["dir"]):
         raise SystemExit(
-            "Output directory already exists.\n\
-                Submit new directory name using --dir \
-                    or remove output directory from the previous run.\n\
-                        Exitting program."
+            """Output directory already exists.\nSubmit new directory name using --dir or remove output directory from the previous run.\nExitting program."""
         )
 
     os.makedirs(config["dir"])
@@ -118,17 +124,25 @@ if __name__ == "__main__":
     if ((sys.version_info[0] < 3) or (sys.version_info[1] < 12)) and (
         config["processes"] > 1
     ):
-        warnings.warn(
-            "Warning........... Python >= 3.12.1 required for multiprocessing!\n\
-                      The program continues to run, but using single process."
-        )
+        print("Python >= 3.12.1 required for multiprocessing!")
+        print("The program continues to run, but using single process.")
+
         # Run only 1 process
         config["processes"] = 1
         # create list containing 1 set for compatibility
         transcripts_chunks = [transcripts]
 
-    number_of_parts = config["processes"]
-    transcripts_chunks = split_data(n=number_of_parts, data_set=transcripts)
+    # Fix negative process number, do not split the data if only 1 process is going to run
+    elif config["processes"] <= 1:
+        # Run only 1 process
+        config["processes"] = 1
+        # create list containing 1 set for compatibility
+        transcripts_chunks = [transcripts]
+
+    # If requirements are met and more processes required, split data using itertools
+    else:
+        number_of_parts = config["processes"]
+        transcripts_chunks = split_data(n=number_of_parts, data_set=transcripts)
 
     processes = []
     file_names = []
@@ -136,10 +150,14 @@ if __name__ == "__main__":
         processes.append(
             Process(
                 target=find_transcripts,
-                args=(targets, transcripts_chunks[n], f"{config['dir']}/output_{n}"),
+                args=(
+                    targets,
+                    transcripts_chunks[n],
+                    os.path.join(config["dir"], f"output_{n}"),
+                ),
             )
         )
-        file_names.append(f"output_{n}")
+        file_names.append(os.path.join(config["dir"], f"output_{n}"))
     for process in processes:
         process.start()
     # get a list of all active child processes
@@ -150,10 +168,16 @@ if __name__ == "__main__":
     for child in children:
         print(child)
     # wait for all processes to finish
-    for t in processes:
-        t.join()
+    for p in processes:
+        p.join()
 
-    # Join output_files after all processes finish
+    # Report status
+    print("Search completed!")
 
+    # Concatenate output_files after all processes finish
+    if len(file_names) > 1:
+        print("Concatenating output files...")
+        concat_output(file_names)
 
-print("Job completed!\n")
+    # Report job status
+    print("~~~ Job completed! ~~~")
