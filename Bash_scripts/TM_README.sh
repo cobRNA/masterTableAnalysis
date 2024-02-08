@@ -44,7 +44,7 @@ done < ./Data/Others/samples.tsv
 
 
 # --------------------
-# stats and plot <- ze starego skryptu
+# stats and plot
 # --------------------
 
 while read lab
@@ -108,7 +108,7 @@ done < ./Data/Others/samples.tsv
 
 
 # --------------------
-# stats and plot <- ze starego skryptu
+# stats and plot
 # --------------------
 
 while read lab
@@ -154,78 +154,66 @@ dev.off()
 #, axis.ticks.y = element_blank(), axis.text.y  = element_blank()
 
 
+# -----------------------
+# CAGE strictsTSS  <------------# brakuje mi TSS.strict_hg38.bed
+# -----------------------
 
-# ------------------------------
-# get the read ids for each category
-# ------------------------------
 
-
-# Convert catalogues in bed12 to gff
-for file in `ls ./Data/Catalogues/*.hg38.bed12`
-    do
-    name=`basename $file | awk -F "." '{print $1"."$2}'`
-    ./Utils/bed12togff ./Data/Catalogues/${name}.bed12 > ./Data/Catalogues/Gff/${name}.gff
-    echo "$name converted."
-    done
-
-# Get ids
-# UWAGA!! ZMIENIŁEM
-# cat \$name.bed| cut -f4| sort| uniq ..........
-# NA
-# cat ./Data/Catalogues/$name.hg38.bed12 | cut -f4 | sort | uniq ..........
-
-while read sampl
+while read lab
 do
-    name=$sampl
-    echo $name
-    cat ./Data/Catalogues/$name.hg38.bed12 | cut -f4 | sort | uniq > ./Data/Processed/Read_ids/${name}.readID
-    cat ./Data/Processed/Cage/$name.5.bed.vsCage.fantom.bedtsv | cut -f4 | sed 's/,/\n/g' | sort | uniq > ./Data/Processed/Read_ids/${name}.cage.readID
-    cat ./Data/Processed/PolyA/$name.3.bed.vspolyAsignals.bedtsv | cut -f4 | sed 's/,/\n/g' | sort | uniq > ./Data/Processed/Read_ids/${name}.polyA.readID
-    cat ./Data/Catalogues/Gff/$name.hg38.gff | awk '{print $10}'| sed 's/\"//g'| sed 's/;//g'| sort | uniq -c | awk '$1==1{print $2}' > ./Data/Processed/Read_ids/${name}.mono.readID
-    cat ./Data/Catalogues/Gff/$name.hg38.gff | awk '{print $10}'| sed 's/\"//g'| sed 's/;//g'| sort | uniq -c | awk '$1>1{print $2}' > ./Data/Processed/Read_ids/${name}.spliced.readID 
-    cat ./Data/Catalogues/Gff/$name.hg38.gff | awk '{print $10}'| sed 's/\"//g'| sed 's/;//g'| sort | uniq > ./Data/Processed/Read_ids/${name}.all.readID 
+    echo $lab
+    while read end dist
+    do
+        cat ./Data/Extracted_ends/$lab.$end.bed | ./Utils/sortbed | ./Utils/jlagarde/bin/bedtools2/bin/bedtools slop -s -l 50 -r 50 -i stdin -g ./Data/Others/chromInfo_hg38.txt | ./Utils/jlagarde/bin/bedtools2/bin/bedtools intersect -u -s -a stdin -b /no_backup/rg/jlagarde/projects/fantom5/TSS_classifier/TSS.strict_hg38.bed > ./Data/Processed/Cage/$lab.$end.bed.vsCage.strictsTSS.bedtsv
+    done < ends.dist.tsv
 done < ./Data/Others/samples.tsv
 
-# --------------------------------
-# stats polyA reads
-# --------------------------------
 
-# UWAGA
-# ZAMIENIŁEM
-# fgrep -f $name.polyAreads.list $name.$typ.readID > ...............
-# NA
-# fgrep -f ./Data/Others/hg38.polyAsignals.bed $name.$typ.readID > ...............
 
-for typ in all spliced mono
-do 
-    echo $typ
-    while read sampl
-    do 
-        name=`echo $sampl`
-        total=`cat ./Data/Processed/Read_ids/$name.readID | wc -l`
-        All=`cat ./Data/Processed/Read_ids/$name.$typ.readID | wc -l`
-        fgrep -f ./Data/Others/hg38.polyAsignals.bed ./Data/Processed/Read_ids/$name.$typ.readID > ./Data/Processed/Read_ids/$name.$typ.polyAreads.readID
-        fgrep -f ./Data/Processed/Read_ids/$name.cage.readID ./Data/Processed/Read_ids/$name.$typ.readID > ./Data/Processed/Read_ids/$name.$typ.cage.polyAreads.readID
-        fgrep -f ./Data/Processed/Read_ids/$name.$typ.polyAreads.readID ./Data/Processed/Read_ids/$name.$typ.cage.polyAreads.readID > ./Data/Processed/Read_ids/$name.$typ.FL.polyAreads.readID
+# ------------------------------------------------------------
+# % Completness
+# ------------------------------------------------------------
 
-        PolyA=`fgrep -vf ./Data/Processed/Read_ids/$name.$typ.FL.polyAreads.readID ./Data/Processed/Read_ids/$name.$typ.polyAreads.readID | wc -l`
-        CAGE=`fgrep -vf ./Data/Processed/Read_ids/$name.$typ.FL.polyAreads.readID ./Data/Processed/Read_ids/$name.$typ.cage.polyAreads.readID | wc -l`
-        FL=`cat ./Data/Processed/Read_ids/$name.$typ.FL.polyAreads.readID | wc -l`
-        supported=$(($PolyA+$CAGE+$FL))
-        NA=`expr $All - $supported` 
-        
-        #PolyAprop=\`echo \$PolyA / \$All| bc -l\`
-        #CAGEprop=\`echo \$CAGE / \$All| bc -l\`
-        #FLprop=\`echo \$FL / \$All| bc -l\`
-        #NAprop=\`echo \$NA / \$All| bc -l\`
-        
-        PolyAprop=`echo $PolyA / $total| bc -l`
-        CAGEprop=`echo $CAGE / $total| bc -l`
-        FLprop=`echo $FL / $total| bc -l`
-        NAprop=`echo $NA / $total| bc -l`
-        
-        echo -e "$lab\tHpreCap\t0+\t$sampl\tcageAndPolyA\t$FL\t$FLprop\t$typ\n$lab\tHpreCap\t0+\t$sampl\tcageOnly\t$CAGE\t$CAGEprop\t$typ\n$lab\tHpreCap\t0+\t$sampl\tpolyAOnly\t$PolyA\t$PolyAprop\t$typ\n$lab\tHpreCap\t0+\t$sampl\tnoCageNoPolyA\t$NA\t$NAprop\t$typ"
-    done < ./Data/Others/samples.tsv  > ./Data/Processed/PolyA/samples.end.completenes.raw.reads.stats.polyAreadslist.$typ.tsv
-done  
+while read lab
+do
+    cat ./Data/Processed/Cage/$lab.5.bed.vsCage.fantom.bedtsv | cut -f4 | sed 's/,/\n/g' | sort | uniq > ./Data/Processed/Cage/$lab.tx.cage
+    cat ./Data/Processed/PolyA/$lab.3.bed.vspolyAsignals.bedtsv | cut -f4 | sed 's/,/\n/g' | sort | uniq > ./Data/Processed/PolyA/$lab.tx.polyA
+    #fgrep -f $lab.tx.cage $lab.tx.polyA > $lab.fl.tx.tsv
+    ./Utils/join.py -a ./Data/Processed/Cage/$lab.tx.cage -b ./Data/Processed/PolyA/$lab.tx.polyA -x 1 -y 1 > ./Data/Processed/Fl/$lab.fl.tx.tsv
+done < ./Data/Others/samples.tsv
+
+
+# Brakuje mi
+# /users/rg/buszczynska/Projects/review/human/annot.comp/$lab.geneIds
+# /users/rg/buszczynska/Projects/review/human/annot.comp/$lab.txIds
+
+while read lab
+do
+    fl=`cat ./Data/Processed/Fl/$lab.fl.tx.tsv | wc -l`
+    total=`cat ./Data/Catalogues/$lab.hg38.bed12 | cut -f4 | sort | uniq | wc -l`
+    propFl=`echo $fl / $total | bc -l`  
+    gene=`cat /users/rg/buszczynska/Projects/review/human/annot.comp/$lab.geneIds | sort | uniq | wc -l`
+    tx=`cat /users/rg/buszczynska/Projects/review/human/annot.comp/$lab.txIds | sort | uniq | wc -l`
+    nbTx=`echo $tx / $gene | bc -l`
+    echo -e "$lab\t$propFl\t$gene\t$nbTx"  
+done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/GENCODE+/g'| sed 's/pcConf/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.completeness.tsv
+
+
+# Oraz:
+# /users/rg/buszczynska/Projects/review/human/annot.comp/$lab.buildLoci.geneIds
+# /users/rg/buszczynska/Projects/review/human/annot.comp/$lab.buildLoci.txIds
+
+
+while read lab
+do
+    fl=`cat $lab.fl.tx.tsv| wc -l`
+    total=`cat $lab.hg38.bed12| cut -f4| sort| uniq| wc -l`
+    propFl=`echo $fl / $total| bc -l`  
+    gene=`cat /users/rg/buszczynska/Projects/review/human/annot.comp/$lab.buildLoci.geneIds|sort|uniq| wc -l`
+    tx=`cat /users/rg/buszczynska/Projects/review/human/annot.comp/$lab.buildLoci.txIds|sort|uniq| wc -l`
+    nbTx=`echo $tx / $gene| bc -l`
+    echo -e "$lab\t$propFl\t$gene\t$nbTx"  
+done < samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/GENCODE+/g'| sed 's/pcConf/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > annots.completeness.buildLoci.tsv
+
 
 
