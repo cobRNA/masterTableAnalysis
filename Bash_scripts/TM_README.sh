@@ -78,8 +78,8 @@ scale_y_continuous(labels=percent, limits=c(0, 1)) +
 coord_flip() +
 geom_text(position = \"stack\", aes(x = gene, y = prop, label = comma(count), hjust = -0.1, vjust = 0.5), size=7) +
 theme(axis.text.x  = element_text(angle=45, vjust=0.5),
-axis.ticks.y = element_blank(),
-axis.text.y  = element_text(angle=0, hjust=0.5)) +
+#axis.ticks.y = element_blank(), #axis.text.y  = element_text(angle=0, hjust=0.5)
+) +
 theme(axis.line.x = element_line(colour = \"black\"),
 axis.line.y = element_line(colour = \"black\"),
 panel.grid.major = element_blank(),
@@ -199,7 +199,7 @@ do
         total=`cat ./Data/Processed/Extracted_ends/$lab.$end.bed | cut -f4 | sort | uniq | wc -l`
         echo -e "$lab\t$total\t$close\t$end" | awk '{print $0"\t"$3/$2}'    
     done 
-done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/GENCODE+/g'| sed 's/pc/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.vsCage.strictsTSS.stats_OLD.tsv 
+done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/CLS/g'| sed 's/pc/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.vsCage.strictsTSS.stats_OLD.tsv 
 
 echo "
 library(ggplot2)
@@ -229,7 +229,6 @@ dev.off()
 " | R --slave
 
 
-
 # --------------------
 # stats and plot <------- NEW
 # --------------------
@@ -242,7 +241,7 @@ do
         total=`cat ./Data/Processed/Extracted_ends/$lab.$end.bed | cut -f4 | sort | uniq | wc -l`
         echo -e "$lab\t$total\t$close\t$end" | awk '{print $0"\t"$3/$2}'    
     done 
-done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/GENCODE+/g'| sed 's/pc/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.vsCage.strictsTSS.stats_NEW.tsv 
+done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/CLS/g'| sed 's/pc/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.vsCage.strictsTSS.stats_NEW.tsv 
 
 echo "
 library(ggplot2)
