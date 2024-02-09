@@ -55,7 +55,7 @@ do
         total=`cat ./Data/Processed/Extracted_ends/$lab.$end.bed | cut -f4 | sort | uniq | wc -l`
         echo -e "$lab\t$total\t$close\t$end" | awk '{print $0"\t"$3/$2}'    
     done 
-done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/CLS/g' | sed 's/CLS+FL/CLS FL/g' > ./Data/Processed/PolyA/annots.polyAsignals.stats.tsv 
+done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/CLS/g' | sed 's/CLS+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.polyAsignals.stats.tsv 
 
 #| sed 's/pcConf/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g'
 
@@ -63,7 +63,7 @@ echo "
 library(ggplot2)
 library(scales)
 cbPalette <- c(\"#a6761d\", \"#e6ab02\", \"#FF7F00\", \"#984EA3\", \"#4DAF4A\", \"#377EB8\", \"#E41A1C\") #, \"#e7298a\",\"#999999\"
-plot <- read.table(\"./Data/Processed/PolyA/annots.polyAsignals.stats.tsv\", header=F, as.is=T, sep=\"\t\")
+plot <- read.table(\"./Data/Processed/Plots_input/annots.polyAsignals.stats.tsv\", header=F, as.is=T, sep=\"\t\")
 colnames(plot)<-c(\"gene\", \"total\", \"count\", \"end\",\"prop\")
 plot\$gene=factor(plot\$gene, levels=c(\"CLS\",\"GENCODE\", \"BIGTranscriptome\", \"RefSeq\", \"FANTOM CAT\", \"MiTranscriptome\", \"NONCODE\")) #, \"CLS FL\", \"Protein coding\"
 pdf(\"./Plots/human.annots.polyAsignals.stats.pdf\", width=8, height=6)
@@ -119,13 +119,13 @@ do
         total=`cat ./Data/Processed/Extracted_ends/$lab.$end.bed | cut -f4 | sort | uniq | wc -l`
         echo -e "$lab\t$total\t$close\t$end" | awk '{print $0"\t"$3/$2}'    
     done 
-done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/CLS/g' | sed 's/CLS+FL/CLS FL/g' > ./Data/Processed/Cage/annots.vsCage.fantom.stats.tsv 
+done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/CLS/g' | sed 's/CLS+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.vsCage.fantom.stats.tsv 
 
 echo "
 library(ggplot2)
 library(scales)
 cbPalette <- c(\"#a6761d\", \"#e6ab02\", \"#FF7F00\", \"#984EA3\", \"#4DAF4A\", \"#377EB8\", \"#E41A1C\") #,\"#999999\", \"#e7298a\"
-plot <- read.table(\"./Data/Processed/Cage/annots.vsCage.fantom.stats.tsv\", header=F, as.is=T, sep=\"\t\")
+plot <- read.table(\"./Data/Processed/Plots_inputs/annots.vsCage.fantom.stats.tsv\", header=F, as.is=T, sep=\"\t\")
 colnames(plot)<-c(\"gene\", \"total\", \"count\", \"end\",\"prop\")
 plot\$gene=factor(plot\$gene, levels=c(\"CLS\",\"GENCODE\",\"BIGTranscriptome\",\"RefSeq\",\"FANTOM CAT\",\"MiTranscriptome\",\"NONCODE\")) #, \"Protein coding\", \"CLS FL\"
 pdf(\"./Plots/human.annots.vsCage.fantom.stats.pdf\", width=7, height=6)
@@ -157,16 +157,126 @@ dev.off()
 # -----------------------
 # CAGE strictsTSS  <------------# brakuje mi TSS.strict_hg38.bed
 # -----------------------
+#hg38_fair+new_CAGE_peaks_phase1and2 powinno byc wymienne ale sprawdzic
+
+# Pliki wynikowe są znacząco inne dla
+# TSS.strict_hg38.bed (OLD),
+# jak i
+# hg38_fair+new_CAGE_peaks_phase1and2.bed (NEW)
+# Zrobiłem analizę dla obu, najwyżej się wywali
 
 
+# OLD
 while read lab
 do
     echo $lab
     while read end dist
     do
-        cat ./Data/Extracted_ends/$lab.$end.bed | ./Utils/sortbed | ./Utils/jlagarde/bin/bedtools2/bin/bedtools slop -s -l 50 -r 50 -i stdin -g ./Data/Others/chromInfo_hg38.txt | ./Utils/jlagarde/bin/bedtools2/bin/bedtools intersect -u -s -a stdin -b /no_backup/rg/jlagarde/projects/fantom5/TSS_classifier/TSS.strict_hg38.bed > ./Data/Processed/Cage/$lab.$end.bed.vsCage.strictsTSS.bedtsv
-    done < ends.dist.tsv
+        cat ./Data/Processed/Extracted_ends/$lab.$end.bed | ./Utils/sortbed | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools slop -s -l 50 -r 50 -i stdin -g ./Data/Others/chromInfo_hg38.txt | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools intersect -u -s -a stdin -b ./Data/Others/TSS.strict_hg38.bed > ./Data/Processed/Cage/$lab.$end.bed.vsCage.strictsTSS_OLD.bedtsv
+    done < ./Data/Others/ends.dist.tsv
 done < ./Data/Others/samples.tsv
+
+# NEW
+while read lab
+do
+    echo $lab
+    while read end dist
+    do
+        cat ./Data/Processed/Extracted_ends/$lab.$end.bed | ./Utils/sortbed | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools slop -s -l 50 -r 50 -i stdin -g ./Data/Others/chromInfo_hg38.txt | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools intersect -u -s -a stdin -b ./Data/Others/hg38_fair+new_CAGE_peaks_phase1and2.bed > ./Data/Processed/Cage/$lab.$end.bed.vsCage.strictsTSS_NEW.bedtsv
+    done < ./Data/Others/ends.dist.tsv
+done < ./Data/Others/samples.tsv
+
+
+# --------------------
+# stats and plot <------- OLD
+# --------------------
+
+while read lab
+do
+    for end in 5
+    do 
+        close=`cat ./Data/Processed/Cage/$lab.$end.bed.vsCage.strictsTSS_OLD.bedtsv | cut -f4 | sort | uniq | wc -l`
+        total=`cat ./Data/Processed/Extracted_ends/$lab.$end.bed | cut -f4 | sort | uniq | wc -l`
+        echo -e "$lab\t$total\t$close\t$end" | awk '{print $0"\t"$3/$2}'    
+    done 
+done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/GENCODE+/g'| sed 's/pc/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.vsCage.strictsTSS.stats_OLD.tsv 
+
+echo "
+library(ggplot2)
+library(scales)
+cbPalette <- c(\"#a6761d\", \"#e6ab02\", \"#FF7F00\", \"#984EA3\", \"#4DAF4A\", \"#377EB8\", \"#E41A1C\") #,\"#999999\", \"#e7298a\"
+plot <- read.table(\"./Data/Processed/Plots_input/annots.vsCage.strictsTSS.stats_OLD.tsv\", header=F, as.is=T, sep=\"\t\")
+colnames(plot)<-c(\"gene\", \"total\", \"count\", \"end\",\"prop\")
+plot\$gene=factor(plot\$gene, levels=c(\"GENCODE+\",\"GENCODE\",\"BIGTranscriptome\",\"RefSeq\",\"FANTOM CAT\",\"MiTranscriptome\",\"NONCODE\")) #, \"Protein coding\", \"CLS FL\"
+pdf(\"./Plots/human.annots.vsCage.strictsTSS.stats_OLD.pdf\", width=8, height=6)
+ggplot(data=plot, aes(x=gene, y=prop)) + geom_bar(stat=\"identity\", fill=cbPalette) +
+ylab(\"% CAGE(+) 5\' ends\") +
+theme_bw(base_size = 28) +
+xlab(\"\") +
+scale_y_continuous(labels=percent, lim=c(0,1)) +
+coord_flip() +
+geom_text(position = \"stack\", aes(x = gene, y = prop, label = comma(count), hjust = -0.1, vjust = 0.5), size=7) +
+theme(axis.text.x  = element_text(angle=45, vjust=0.5)) +
+theme(axis.line.x = element_line(colour = \"black\"),
+axis.line.y = element_line(colour = \"black\"),
+panel.grid.major = element_blank(),
+panel.grid.minor = element_blank(),
+panel.border = element_blank(),
+panel.background = element_blank(),
+strip.background = element_rect(colour=\"black\",fill=\"white\"))
+#+facet_wrap(~ end) 
+dev.off()
+" | R --slave
+
+
+
+# --------------------
+# stats and plot <------- NEW
+# --------------------
+
+while read lab
+do
+    for end in 5
+    do 
+        close=`cat ./Data/Processed/Cage/$lab.$end.bed.vsCage.strictsTSS_NEW.bedtsv | cut -f4 | sort | uniq | wc -l`
+        total=`cat ./Data/Processed/Extracted_ends/$lab.$end.bed | cut -f4 | sort | uniq | wc -l`
+        echo -e "$lab\t$total\t$close\t$end" | awk '{print $0"\t"$3/$2}'    
+    done 
+done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/GENCODE+/g'| sed 's/pc/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.vsCage.strictsTSS.stats_NEW.tsv 
+
+echo "
+library(ggplot2)
+library(scales)
+cbPalette <- c(\"#a6761d\", \"#e6ab02\", \"#FF7F00\", \"#984EA3\", \"#4DAF4A\", \"#377EB8\", \"#E41A1C\") #,\"#999999\", \"#e7298a\"
+plot <- read.table(\"./Data/Processed/Plots_input/annots.vsCage.strictsTSS.stats_NEW.tsv\", header=F, as.is=T, sep=\"\t\")
+colnames(plot)<-c(\"gene\", \"total\", \"count\", \"end\",\"prop\")
+plot\$gene=factor(plot\$gene, levels=c(\"GENCODE+\",\"GENCODE\",\"BIGTranscriptome\",\"RefSeq\",\"FANTOM CAT\",\"MiTranscriptome\",\"NONCODE\")) #, \"Protein coding\", \"CLS FL\"
+pdf(\"./Plots/human.annots.vsCage.strictsTSS.stats_NEW.pdf\", width=8, height=6)
+ggplot(data=plot, aes(x=gene, y=prop)) + geom_bar(stat=\"identity\", fill=cbPalette) +
+ylab(\"% CAGE(+) 5\' ends\") +
+theme_bw(base_size = 28) +
+xlab(\"\") +
+scale_y_continuous(labels=percent, lim=c(0,1)) +
+coord_flip() +
+geom_text(position = \"stack\", aes(x = gene, y = prop, label = comma(count), hjust = -0.1, vjust = 0.5), size=7) +
+theme(axis.text.x  = element_text(angle=45, vjust=0.5)) +
+theme(axis.line.x = element_line(colour = \"black\"),
+axis.line.y = element_line(colour = \"black\"),
+panel.grid.major = element_blank(),
+panel.grid.minor = element_blank(),
+panel.border = element_blank(),
+panel.background = element_blank(),
+strip.background = element_rect(colour=\"black\",fill=\"white\"))
+#+facet_wrap(~ end) 
+dev.off()
+" | R --slave
+
+
+
+
+
+
+
 
 
 
@@ -214,6 +324,18 @@ do
     nbTx=`echo $tx / $gene| bc -l`
     echo -e "$lab\t$propFl\t$gene\t$nbTx"  
 done < samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/GENCODE+/g'| sed 's/pcConf/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > annots.completeness.buildLoci.tsv
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
