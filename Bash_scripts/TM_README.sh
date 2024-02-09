@@ -20,7 +20,7 @@ do
     do
         echo $end
         cat $file | ./Utils/extractTranscriptEndsFromBed12.pl $end | ./Utils/sortbed  > ./Data/Processed/Extracted_ends/$lab.$end.bed
-    done < ./Data/Others/ends.dist.tsv
+    done < ./Data/Source/ends.dist.tsv
 done
 
 # bez tego:
@@ -38,9 +38,9 @@ do
     echo $name
     while read end dist
     do
-       cat ./Data/Processed/Extracted_ends/$name.$end.bed | ./Utils/sortbed | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools slop -s -l 5 -r 5 -i stdin -g ./Data/Others/chromInfo_hg38.txt | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools intersect -u -s -a stdin -b ./Data/Others/hg38.polyAsignals.bed > ./Data/Processed/PolyA/$name.$end.bed.vspolyAsignals.bedtsv
-    done < ./Data/Others/ends.dist.tsv
-done < ./Data/Others/samples.tsv
+       cat ./Data/Processed/Extracted_ends/$name.$end.bed | ./Utils/sortbed | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools slop -s -l 5 -r 5 -i stdin -g ./Data/Source/chromInfo_hg38.txt | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools intersect -u -s -a stdin -b ./Data/Source/hg38.polyAsignals.bed > ./Data/Processed/PolyA/$name.$end.bed.vspolyAsignals.bedtsv
+    done < ./Data/Source/ends.dist.tsv
+done < ./Data/Source/samples.tsv
 
 
 # --------------------
@@ -51,11 +51,11 @@ while read lab
 do
     for end in 3
     do 
-        close=`cat ./Data/Processed/PolyA/$lab.$end.bed.vspolyAsignals.bedtsv | cut -f4 | sort |uniq | wc -l`
+        close=`cat ./Data/Processed/PolyA/$lab.$end.bed.vspolyAsignals.bedtsv | cut -f4 | sort | uniq | wc -l`
         total=`cat ./Data/Processed/Extracted_ends/$lab.$end.bed | cut -f4 | sort | uniq | wc -l`
         echo -e "$lab\t$total\t$close\t$end" | awk '{print $0"\t"$3/$2}'    
     done 
-done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/CLS/g' | sed 's/CLS+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.polyAsignals.stats.tsv 
+done < ./Data/Source/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/CLS/g' | sed 's/CLS+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.polyAsignals.stats.tsv 
 
 #| sed 's/pcConf/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g'
 
@@ -102,9 +102,9 @@ do
     echo $name
     while read end dist
     do
-        cat ./Data/Processed/Extracted_ends/$name.$end.bed | ./Utils/sortbed | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools slop -s -l 50 -r 50 -i stdin -g ./Data/Others/chromInfo_hg38.txt | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools intersect -u -s -a stdin -b ./Data/Others/hg38_fair+new_CAGE_peaks_phase1and2.bed > ./Data/Processed/Cage/$name.$end.bed.vsCage.fantom.bedtsv
-    done < ./Data/Others/ends.dist.tsv
-done < ./Data/Others/samples.tsv
+        cat ./Data/Processed/Extracted_ends/$name.$end.bed | ./Utils/sortbed | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools slop -s -l 50 -r 50 -i stdin -g ./Data/Source/chromInfo_hg38.txt | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools intersect -u -s -a stdin -b ./Data/Source/hg38_fair+new_CAGE_peaks_phase1and2.bed > ./Data/Processed/Cage/$name.$end.bed.vsCage.fantom.bedtsv
+    done < ./Data/Source/ends.dist.tsv
+done < ./Data/Source/samples.tsv
 
 
 # --------------------
@@ -119,7 +119,7 @@ do
         total=`cat ./Data/Processed/Extracted_ends/$lab.$end.bed | cut -f4 | sort | uniq | wc -l`
         echo -e "$lab\t$total\t$close\t$end" | awk '{print $0"\t"$3/$2}'    
     done 
-done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/CLS/g' | sed 's/CLS+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.vsCage.fantom.stats.tsv 
+done < ./Data/Source/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/CLS/g' | sed 's/CLS+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.vsCage.fantom.stats.tsv 
 
 echo "
 library(ggplot2)
@@ -172,9 +172,9 @@ do
     echo $lab
     while read end dist
     do
-        cat ./Data/Processed/Extracted_ends/$lab.$end.bed | ./Utils/sortbed | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools slop -s -l 50 -r 50 -i stdin -g ./Data/Others/chromInfo_hg38.txt | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools intersect -u -s -a stdin -b ./Data/Others/TSS.strict_hg38.bed > ./Data/Processed/Cage/$lab.$end.bed.vsCage.strictsTSS_OLD.bedtsv
-    done < ./Data/Others/ends.dist.tsv
-done < ./Data/Others/samples.tsv
+        cat ./Data/Processed/Extracted_ends/$lab.$end.bed | ./Utils/sortbed | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools slop -s -l 50 -r 50 -i stdin -g ./Data/Source/chromInfo_hg38.txt | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools intersect -u -s -a stdin -b ./Data/Source/TSS.strict_hg38.bed > ./Data/Processed/Cage/$lab.$end.bed.vsCage.strictsTSS_OLD.bedtsv
+    done < ./Data/Source/ends.dist.tsv
+done < ./Data/Source/samples.tsv
 
 # NEW
 while read lab
@@ -182,9 +182,9 @@ do
     echo $lab
     while read end dist
     do
-        cat ./Data/Processed/Extracted_ends/$lab.$end.bed | ./Utils/sortbed | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools slop -s -l 50 -r 50 -i stdin -g ./Data/Others/chromInfo_hg38.txt | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools intersect -u -s -a stdin -b ./Data/Others/hg38_fair+new_CAGE_peaks_phase1and2.bed > ./Data/Processed/Cage/$lab.$end.bed.vsCage.strictsTSS_NEW.bedtsv
-    done < ./Data/Others/ends.dist.tsv
-done < ./Data/Others/samples.tsv
+        cat ./Data/Processed/Extracted_ends/$lab.$end.bed | ./Utils/sortbed | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools slop -s -l 50 -r 50 -i stdin -g ./Data/Source/chromInfo_hg38.txt | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools intersect -u -s -a stdin -b ./Data/Source/hg38_fair+new_CAGE_peaks_phase1and2.bed > ./Data/Processed/Cage/$lab.$end.bed.vsCage.strictsTSS_NEW.bedtsv
+    done < ./Data/Source/ends.dist.tsv
+done < ./Data/Source/samples.tsv
 
 
 # --------------------
@@ -199,7 +199,7 @@ do
         total=`cat ./Data/Processed/Extracted_ends/$lab.$end.bed | cut -f4 | sort | uniq | wc -l`
         echo -e "$lab\t$total\t$close\t$end" | awk '{print $0"\t"$3/$2}'    
     done 
-done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/CLS/g'| sed 's/pc/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.vsCage.strictsTSS.stats_OLD.tsv 
+done < ./Data/Source/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/CLS/g'| sed 's/pc/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.vsCage.strictsTSS.stats_OLD.tsv 
 
 echo "
 library(ggplot2)
@@ -216,7 +216,7 @@ xlab(\"\") +
 scale_y_continuous(labels=percent, lim=c(0,1)) +
 coord_flip() +
 geom_text(position = \"stack\", aes(x = gene, y = prop, label = comma(count), hjust = -0.1, vjust = 0.5), size=7) +
-theme(axis.text.x  = element_text(angle=45, vjust=0.5)) +
+theme(axis.text.x = element_text(angle=45, vjust=0.5)) +
 theme(axis.line.x = element_line(colour = \"black\"),
 axis.line.y = element_line(colour = \"black\"),
 panel.grid.major = element_blank(),
@@ -241,7 +241,7 @@ do
         total=`cat ./Data/Processed/Extracted_ends/$lab.$end.bed | cut -f4 | sort | uniq | wc -l`
         echo -e "$lab\t$total\t$close\t$end" | awk '{print $0"\t"$3/$2}'    
     done 
-done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/CLS/g'| sed 's/pc/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.vsCage.strictsTSS.stats_NEW.tsv 
+done < ./Data/Source/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/CLS/g'| sed 's/pc/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.vsCage.strictsTSS.stats_NEW.tsv 
 
 echo "
 library(ggplot2)
@@ -271,14 +271,6 @@ dev.off()
 " | R --slave
 
 
-
-
-
-
-
-
-
-
 # ------------------------------------------------------------
 # % Completness
 # ------------------------------------------------------------
@@ -289,7 +281,7 @@ do
     cat ./Data/Processed/PolyA/$lab.3.bed.vspolyAsignals.bedtsv | cut -f4 | sed 's/,/\n/g' | sort | uniq > ./Data/Processed/PolyA/$lab.tx.polyA
     #fgrep -f $lab.tx.cage $lab.tx.polyA > $lab.fl.tx.tsv
     ./Utils/join.py -a ./Data/Processed/Cage/$lab.tx.cage -b ./Data/Processed/PolyA/$lab.tx.polyA -x 1 -y 1 > ./Data/Processed/Fl/$lab.fl.tx.tsv
-done < ./Data/Others/samples.tsv
+done < ./Data/Source/samples.tsv
 
 
 # Brakuje mi
@@ -305,7 +297,7 @@ do
     tx=`cat /users/rg/buszczynska/Projects/review/human/annot.comp/$lab.txIds | sort | uniq | wc -l`
     nbTx=`echo $tx / $gene | bc -l`
     echo -e "$lab\t$propFl\t$gene\t$nbTx"  
-done < ./Data/Others/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/GENCODE+/g'| sed 's/pcConf/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.completeness.tsv
+done < ./Data/Source/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/GENCODE+/g'| sed 's/pcConf/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.completeness.tsv
 
 
 # Oraz:
