@@ -241,7 +241,7 @@ do
 done < samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/GENCODE+/g'| sed 's/pcConf/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > annots.completeness.intropolis.buildLoci.tsv
 
 
-echo "
+echo "   <------tego nie robic
 library(ggplot2)
 library(scales)
 cbPalette <- c(\"#a6761d\", \"#e6ab02\", \"#FF7F00\", \"#984EA3\", \"#4DAF4A\", \"#377EB8\", \"#E41A1C\",\"#999999\", \"#e7298a\")
@@ -257,7 +257,7 @@ dev.off()
 
 cp annots.completeness.intropolis.buildLoci.pdf /users/rg/buszczynska/public_html/gencode/tmp/B/review
 
-echo "
+echo " <------ten robic
 library(ggplot2)
 library(scales)
 cbPalette <- c(\"#a6761d\", \"#e6ab02\", \"#FF7F00\", \"#984EA3\", \"#4DAF4A\", \"#377EB8\", \"#E41A1C\",\"#999999\", \"#e7298a\")
