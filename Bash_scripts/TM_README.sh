@@ -275,6 +275,12 @@ dev.off()
 # % Completness
 # ------------------------------------------------------------
 
+# I've downloaded lacking files ($lab.geneIds, $lab.txIds, $lab.buildLoci.geneIds, $lab.buildLoci.txIds)
+# Using:
+# wget -r -l1 -nd --no-parent -A "*.txIds" https://public-docs.crg.es/rguigo/lncRNA_review/TM/annot.comp/
+# wget -r -l1 -nd --no-parent -A "*.geneIds" https://public-docs.crg.es/rguigo/lncRNA_review/TM/annot.comp/
+
+
 while read lab
 do
     cat ./Data/Processed/Cage/$lab.5.bed.vsCage.fantom.bedtsv | cut -f4 | sed 's/,/\n/g' | sort | uniq > ./Data/Processed/Cage/$lab.tx.cage
@@ -293,11 +299,11 @@ do
     fl=`cat ./Data/Processed/Fl/$lab.fl.tx.tsv | wc -l`
     total=`cat ./Data/Catalogues/$lab.hg38.bed12 | cut -f4 | sort | uniq | wc -l`
     propFl=`echo $fl / $total | bc -l`  
-    gene=`cat /users/rg/buszczynska/Projects/review/human/annot.comp/$lab.geneIds | sort | uniq | wc -l`
-    tx=`cat /users/rg/buszczynska/Projects/review/human/annot.comp/$lab.txIds | sort | uniq | wc -l`
+    gene=`cat ./Data/Source/Completness/$lab.geneIds | sort | uniq | wc -l`
+    tx=`cat ./Data/Source/Completness/$lab.txIds | sort | uniq | wc -l`
     nbTx=`echo $tx / $gene | bc -l`
     echo -e "$lab\t$propFl\t$gene\t$nbTx"  
-done < ./Data/Source/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/GENCODE+/g'| sed 's/pcConf/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.completeness.tsv
+done < ./Data/Source/samples.tsv | sed 's/gen/GENCODE/g' | sed 's/refseq/RefSeq/g' | sed 's/fantomCat/FANTOM CAT/g' | sed 's/mitrans/MiTranscriptome/g' | sed 's/bigtrans/BIGTranscriptome/g' | sed 's/noncode/NONCODE/g' | sed 's/cls/GENCODE+/g' | sed 's/pcConf/Protein coding/g' | sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.completeness.tsv
 
 
 # Oraz:
@@ -307,20 +313,69 @@ done < ./Data/Source/samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g
 
 while read lab
 do
-    fl=`cat $lab.fl.tx.tsv| wc -l`
-    total=`cat $lab.hg38.bed12| cut -f4| sort| uniq| wc -l`
+    fl=`cat ./Data/Processed/Fl/$lab.fl.tx.tsv| wc -l`
+    total=`cat ./Data/Catalogues/$lab.hg38.bed12| cut -f4| sort| uniq| wc -l`
     propFl=`echo $fl / $total| bc -l`  
-    gene=`cat /users/rg/buszczynska/Projects/review/human/annot.comp/$lab.buildLoci.geneIds|sort|uniq| wc -l`
-    tx=`cat /users/rg/buszczynska/Projects/review/human/annot.comp/$lab.buildLoci.txIds|sort|uniq| wc -l`
+    gene=`cat ./Data/Source/Completness/$lab.buildLoci.geneIds | sort | uniq | wc -l`
+    tx=`cat ./Data/Source/Completness/$lab.buildLoci.txIds | sort | uniq | wc -l`
     nbTx=`echo $tx / $gene| bc -l`
     echo -e "$lab\t$propFl\t$gene\t$nbTx"  
-done < samples.tsv | sed 's/gen/GENCODE/g'| sed 's/refseq/RefSeq/g'|sed 's/fantomCat/FANTOM CAT/g'| sed 's/mitrans/MiTranscriptome/g'| sed 's/bigtrans/BIGTranscriptome/g'| sed 's/noncode/NONCODE/g'| sed 's/cls/GENCODE+/g'| sed 's/pcConf/Protein coding/g'| sed 's/GENCODE+FL/CLS FL/g' > annots.completeness.buildLoci.tsv
+done < ./Data/Source/samples.tsv | sed 's/gen/GENCODE/g' | sed 's/refseq/RefSeq/g' | sed 's/fantomCat/FANTOM CAT/g' | sed 's/mitrans/MiTranscriptome/g' | sed 's/bigtrans/BIGTranscriptome/g' | sed 's/noncode/NONCODE/g' | sed 's/cls/GENCODE+/g' | sed 's/pcConf/Protein coding/g' | sed 's/GENCODE+FL/CLS FL/g' > ./Data/Processed/Plots_input/annots.completeness.buildLoci.tsv
 
 
+echo "
+library(ggplot2)
+library(scales)
+cbPalette <- c(\"#a6761d\", \"#e6ab02\", \"#FF7F00\", \"#984EA3\", \"#4DAF4A\", \"#377EB8\", \"#E41A1C\") #,\"#999999\", \"#e7298a\"
+plot <- read.table(\"./Data/Processed/Plots_input/annots.completeness.buildLoci.tsv\", header=F, as.is=T, sep=\"\t\")
+colnames(plot)<-c(\"Catalog\", \"fl\", \"gene\", \"Isoforms\")
+plot\$Catalog=factor(plot\$Catalog, levels=c(\"GENCODE+\",\"GENCODE\",\"BIGTranscriptome\",\"RefSeq\",\"FANTOM CAT\",\"MiTranscriptome\",\"NONCODE\")) #, \"Protein coding\", \"CLS FL\"
+#png(\"annots.completeness.buildLoci.png\", bg = \"white\", units=\"in\", width=8, height=6, res=300)
+pdf(\"./Plots/annots.completeness.buildLoci.pdf\", bg = \"white\", width=8, height=6.2)
+#setEPS()
+#postscript(\"annots.completeness.buildLoci.eps\", family=\"serif\", width=12, height=8) 
+ggplot(data=plot, aes(x=gene, y=fl, size=Isoforms, fill=Catalog)) +
+geom_point(shape = 21) +
+ylab(\"% Completeness\") +
+scale_fill_manual(values = cbPalette) +
+theme_bw(base_size = 24) +
+xlab(\"Number of loci\") +
+scale_x_continuous(lim=c(0,100000), breaks=seq(0,100000, by=25000)) +
+scale_y_continuous(labels=percent, lim=c(0,1)) +
+theme(axis.text.x = element_text(vjust=0.5),legend.text = element_text(size=12.5)) +
+theme(axis.line.x = element_line(colour = \"black\"),
+axis.line.y = element_line(colour = \"black\"),
+panel.grid.major = element_blank(),
+panel.grid.minor = element_blank(),
+panel.border = element_blank(),
+panel.background = element_blank(),
+strip.background = element_rect(colour=\"black\",fill=\"white\")) +
+scale_size_area(max_size = 15) +
+guides(fill = guide_legend(override.aes = list(size=6.5)))
+#+facet_wrap(~ end) 
+dev.off()
+" | R --slave
 
 
+# NO PC
 
+cat ./Data/Processed/Plots_input/annots.completeness.buildLoci.tsv | grep -v Protein | grep -v CLS > ./Data/Processed/Plots_input/annots.completeness.buildLoci.noPC.tsv
 
+echo "
+library(ggplot2)
+library(scales)
+cbPalette <- c(\"#a6761d\", \"#e6ab02\", \"#FF7F00\", \"#984EA3\", \"#4DAF4A\", \"#377EB8\", \"#E41A1C\")
+plot <- read.table(\"./Data/Processed/Plots_input/annots.completeness.buildLoci.noPC.tsv\", header=F, as.is=T, sep=\"\t\")
+colnames(plot)<-c(\"Catalog\", \"fl\", \"gene\", \"Isoforms\")
+plot\$Catalog=factor(plot\$Catalog, levels=c(\"GENCODE+\",\"GENCODE\",\"BIGTranscriptome\",\"RefSeq\",\"FANTOM CAT\",\"MiTranscriptome\",\"NONCODE\"))
+#png(\"annots.completeness.buildLoci.noPC.png\", bg = \"white\", units=\"in\", width=8, height=6, res=300)
+pdf(\"./Data/Plots/annots.completeness.buildLoci.noPC.pdf\", bg = \"white\", width=8, height=6.2)
+#setEPS()
+#postscript(\"annots.completeness.buildLoci.noPC.eps\", family=\"serif\", width=12, height=8) 
+ggplot(data=plot, aes(x=gene, y=fl, size=Isoforms, fill=Catalog)) + geom_point(shape = 21) + ylab(\"% Completeness\")+ scale_fill_manual(values = cbPalette)+ theme_bw(base_size = 24) + xlab(\"Number of loci\")+ scale_x_continuous(lim=c(0,100000), breaks=seq(0,100000, by=25000))+ scale_y_continuous(labels=percent, lim=c(0,0.3)) +theme(axis.text.x  = element_text(vjust=0.5),legend.text = element_text(size=12.5))+ theme(axis.line.x = element_line(colour = \"black\"), axis.line.y = element_line(colour = \"black\"),panel.grid.major = element_blank(),panel.grid.minor = element_blank(),panel.border = element_blank(),panel.background = element_blank(), strip.background = element_rect(colour=\"black\",fill=\"white\"))+ scale_size_area(max_size = 17)+ guides(fill = guide_legend(override.aes = list(size=6.5)))
+#+facet_wrap(~ end) 
+dev.off()
+" | R --slave
 
 
 
