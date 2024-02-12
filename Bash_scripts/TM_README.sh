@@ -65,7 +65,7 @@ library(scales)
 cbPalette <- c(\"#a6761d\", \"#e6ab02\", \"#FF7F00\", \"#984EA3\", \"#4DAF4A\", \"#377EB8\", \"#E41A1C\", \"#e7298a\",\"#999999\") #
 plot <- read.table(\"./Data/Processed/Plots_input/annots.polyAsignals.stats.tsv\", header=F, as.is=T, sep=\"\t\")
 colnames(plot)<-c(\"gene\", \"total\", \"count\", \"end\",\"prop\")
-plot\$gene=factor(plot\$gene, levels=c(\"CLS\",\"GENCODE\", \"BIGTranscriptome\", \"RefSeq\", \"FANTOM CAT\", \"MiTranscriptome\", \"NONCODE\", \"CLS FL\", \"Protein coding\")) #
+plot\$gene=factor(plot\$gene, levels=c(\"GENCODE+\",\"GENCODE\", \"BIGTranscriptome\", \"RefSeq\", \"FANTOM CAT\", \"MiTranscriptome\", \"NONCODE\", \"CLS FL\", \"Protein coding\")) #
 pdf(\"./Plots/human.annots.polyAsignals.stats.pdf\", width=8, height=6)
 #setEPS()
 #postscript(\"human.annots.polyAsignals.stats.eps\", family=\"serif\", width=8, height=10)
@@ -127,7 +127,7 @@ library(scales)
 cbPalette <- c(\"#a6761d\", \"#e6ab02\", \"#FF7F00\", \"#984EA3\", \"#4DAF4A\", \"#377EB8\", \"#E41A1C\",\"#999999\", \"#e7298a\") #
 plot <- read.table(\"./Data/Processed/Plots_input/annots.vsCage.fantom.stats.tsv\", header=F, as.is=T, sep=\"\t\")
 colnames(plot)<-c(\"gene\", \"total\", \"count\", \"end\",\"prop\")
-plot\$gene=factor(plot\$gene, levels=c(\"CLS\",\"GENCODE\",\"BIGTranscriptome\",\"RefSeq\",\"FANTOM CAT\",\"MiTranscriptome\",\"NONCODE\", \"Protein coding\", \"CLS FL\")) #
+plot\$gene=factor(plot\$gene, levels=c(\"GENCODE+\",\"GENCODE\",\"BIGTranscriptome\",\"RefSeq\",\"FANTOM CAT\",\"MiTranscriptome\",\"NONCODE\", \"Protein coding\", \"CLS FL\")) #
 pdf(\"./Plots/human.annots.vsCage.fantom.stats.pdf\", width=7, height=6)
 #setEPS()
 #postscript(\"human.annots.vsCage.fantom.stats.eps\", family=\"serif\", width=6, height=10)
@@ -208,7 +208,7 @@ cbPalette <- c(\"#a6761d\", \"#e6ab02\", \"#FF7F00\", \"#984EA3\", \"#4DAF4A\", 
 plot <- read.table(\"./Data/Processed/Plots_input/annots.vsCage.strictsTSS.stats_OLD.tsv\", header=F, as.is=T, sep=\"\t\")
 colnames(plot)<-c(\"gene\", \"total\", \"count\", \"end\",\"prop\")
 plot\$gene=factor(plot\$gene, levels=c(\"GENCODE+\",\"GENCODE\",\"BIGTranscriptome\",\"RefSeq\",\"FANTOM CAT\",\"MiTranscriptome\",\"NONCODE\", \"Protein coding\", \"CLS FL\")) #
-pdf(\"./Plots/human.annots.vsCage.strictsTSS.stats_OLD.pdf\", width=8, height=6)
+pdf(\"./Plots/human.annots.vsCage.strictsTSS.stats_OLD.pdf\", width=9, height=6)
 ggplot(data=plot, aes(x=gene, y=prop)) + geom_bar(stat=\"identity\", fill=cbPalette) +
 ylab(\"% CAGE(+) 5\' ends\") +
 theme_bw(base_size = 28) +
@@ -250,7 +250,7 @@ cbPalette <- c(\"#a6761d\", \"#e6ab02\", \"#FF7F00\", \"#984EA3\", \"#4DAF4A\", 
 plot <- read.table(\"./Data/Processed/Plots_input/annots.vsCage.strictsTSS.stats_NEW.tsv\", header=F, as.is=T, sep=\"\t\")
 colnames(plot)<-c(\"gene\", \"total\", \"count\", \"end\",\"prop\")
 plot\$gene=factor(plot\$gene, levels=c(\"GENCODE+\",\"GENCODE\",\"BIGTranscriptome\",\"RefSeq\",\"FANTOM CAT\",\"MiTranscriptome\",\"NONCODE\", \"Protein coding\", \"CLS FL\")) #
-pdf(\"./Plots/human.annots.vsCage.strictsTSS.stats_NEW.pdf\", width=8, height=6)
+pdf(\"./Plots/human.annots.vsCage.strictsTSS.stats_NEW.pdf\", width=9, height=6)
 ggplot(data=plot, aes(x=gene, y=prop)) + geom_bar(stat=\"identity\", fill=cbPalette) +
 ylab(\"% CAGE(+) 5\' ends\") +
 theme_bw(base_size = 28) +
@@ -331,7 +331,7 @@ plot <- read.table(\"./Data/Processed/Plots_input/annots.completeness.buildLoci.
 colnames(plot)<-c(\"Catalog\", \"fl\", \"gene\", \"Isoforms\")
 plot\$Catalog=factor(plot\$Catalog, levels=c(\"GENCODE+\",\"GENCODE\",\"BIGTranscriptome\",\"RefSeq\",\"FANTOM CAT\",\"MiTranscriptome\",\"NONCODE\", \"Protein coding\", \"CLS FL\")) #
 #png(\"annots.completeness.buildLoci.png\", bg = \"white\", units=\"in\", width=8, height=6, res=300)
-pdf(\"./Plots/annots.completeness.buildLoci.pdf\", bg = \"white\", width=8, height=6.2)
+pdf(\"./Plots/annots.completeness.buildLoci.pdf\", bg = \"white\", width=8, height=7)
 #setEPS()
 #postscript(\"annots.completeness.buildLoci.eps\", family=\"serif\", width=12, height=8) 
 ggplot(data=plot, aes(x=gene, y=fl, size=Isoforms, fill=Catalog)) +
@@ -369,19 +369,29 @@ plot <- read.table(\"./Data/Processed/Plots_input/annots.completeness.buildLoci.
 colnames(plot)<-c(\"Catalog\", \"fl\", \"gene\", \"Isoforms\")
 plot\$Catalog=factor(plot\$Catalog, levels=c(\"GENCODE+\",\"GENCODE\",\"BIGTranscriptome\",\"RefSeq\",\"FANTOM CAT\",\"MiTranscriptome\",\"NONCODE\"))
 #png(\"annots.completeness.buildLoci.noPC.png\", bg = \"white\", units=\"in\", width=8, height=6, res=300)
-pdf(\"./Plots/annots.completeness.buildLoci.noPC.pdf\", bg = \"white\", width=8, height=6.2)
+pdf(\"./Plots/annots.completeness.buildLoci.noPC.pdf\", bg = \"white\", width=8, height=7)
 #setEPS()
 #postscript(\"annots.completeness.buildLoci.noPC.eps\", family=\"serif\", width=12, height=8) 
-ggplot(data=plot, aes(x=gene, y=fl, size=Isoforms, fill=Catalog)) + geom_point(shape = 21) + ylab(\"% Completeness\")+ scale_fill_manual(values = cbPalette)+ theme_bw(base_size = 24) + xlab(\"Number of loci\")+ scale_x_continuous(lim=c(0,100000), breaks=seq(0,100000, by=25000))+ scale_y_continuous(labels=percent, lim=c(0,0.3)) +theme(axis.text.x  = element_text(vjust=0.5),legend.text = element_text(size=12.5))+ theme(axis.line.x = element_line(colour = \"black\"), axis.line.y = element_line(colour = \"black\"),panel.grid.major = element_blank(),panel.grid.minor = element_blank(),panel.border = element_blank(),panel.background = element_blank(), strip.background = element_rect(colour=\"black\",fill=\"white\"))+ scale_size_area(max_size = 17)+ guides(fill = guide_legend(override.aes = list(size=6.5)))
+ggplot(data=plot, aes(x=gene, y=fl, size=Isoforms, fill=Catalog)) +
+geom_point(shape = 21) +
+ylab(\"% Completeness\") +
+scale_fill_manual(values = cbPalette)+ theme_bw(base_size = 24) +
+xlab(\"Number of loci\") +
+scale_x_continuous(lim=c(0,100000), breaks=seq(0,100000, by=25000)) +
+scale_y_continuous(labels=percent, lim=c(0,0.3)) +
+theme(axis.text.x = element_text(vjust=0.5),legend.text = element_text(size=12.5)) +
+theme(axis.line.x = element_line(colour = \"black\"),
+axis.line.y = element_line(colour = \"black\"),
+panel.grid.major = element_blank(),
+panel.grid.minor = element_blank(),
+panel.border = element_blank(),
+panel.background = element_blank(),
+strip.background = element_rect(colour=\"black\",fill=\"white\")) +
+scale_size_area(max_size = 17) +
+guides(fill = guide_legend(override.aes = list(size=6.5)))
 #+facet_wrap(~ end) 
 dev.off()
 " | R --slave
-
-
-
-
-
-
 
 
 
