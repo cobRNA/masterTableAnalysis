@@ -125,7 +125,7 @@ echo "
 library(ggplot2)
 library(scales)
 cbPalette <- c(\"#a6761d\", \"#e6ab02\", \"#FF7F00\", \"#984EA3\", \"#4DAF4A\", \"#377EB8\", \"#E41A1C\",\"#999999\", \"#e7298a\") #
-plot <- read.table(\"./Data/Processed/Plots_inputs/annots.vsCage.fantom.stats.tsv\", header=F, as.is=T, sep=\"\t\")
+plot <- read.table(\"./Data/Processed/Plots_input/annots.vsCage.fantom.stats.tsv\", header=F, as.is=T, sep=\"\t\")
 colnames(plot)<-c(\"gene\", \"total\", \"count\", \"end\",\"prop\")
 plot\$gene=factor(plot\$gene, levels=c(\"CLS\",\"GENCODE\",\"BIGTranscriptome\",\"RefSeq\",\"FANTOM CAT\",\"MiTranscriptome\",\"NONCODE\", \"Protein coding\", \"CLS FL\")) #
 pdf(\"./Plots/human.annots.vsCage.fantom.stats.pdf\", width=7, height=6)
