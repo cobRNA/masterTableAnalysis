@@ -93,7 +93,7 @@ dev.off()
 
 
 # -----------------------
-# CAGE FANTOM pahse 1+2
+# CAGE FANTOM phase 1+2
 # -----------------------
 
 while read sampl
