@@ -9,7 +9,7 @@
 for file in `ls ./Data/Catalogues/*.hg38.bed12`
 do
     echo $file
-    lab=`basename $file| awk -F "." '{print $1}'`
+    lab=`basename $file | awk -F "." '{print $1}'`
     while read end dist
     do
         echo $end
