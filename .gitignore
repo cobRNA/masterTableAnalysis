@@ -4,6 +4,8 @@ notes
 test.py
 mt_rna_slice_by_target_single.py
 /Plots/old
+/R_notebooks/*.html
+/R_notebooks/robocze/*.html
 
 # Not yet ready files
 /Data/Processed
