@@ -6,6 +6,8 @@ mt_rna_slice_by_target_single.py
 /Plots/old
 /R_notebooks/*.html
 /R_notebooks/robocze/*.html
+/R_notebooks/.Rproj.user
+
 
 # Not yet ready files
 /Data/Processed
