@@ -7,6 +7,7 @@ mt_rna_slice_by_target_single.py
 /R_notebooks/*.html
 /R_notebooks/robocze/*.html
 /R_notebooks/.Rproj.user
+/R_notebooks/.Rhistory
 
 
 # Not yet ready files
