@@ -391,6 +391,15 @@ cat t_s_lncrna_cat.loci.gff | awk '$1~/^chr.$/ || $1~/^chr..$/' | awk '$1!~/chrM
 bedtools intersect -s -wao -a tmerged_T_RNA_ICmT_and_catalogs.gtf -b tmerged_T_RNA_ICmT_and_catalogs.gtf | ./buildLoci.pl - > tmerged_T_RNA_ICmT_and_catalogs.loci.gff
 
 
+#######################################################################################
+############################ Targets analysis #########################################
+#######################################################################################
+
+I needed to perform statistics for mT (or later IC-mt) regarding targets detection rate by tissue.
+I had to prepare dataframe having transcript ids, target ids, and sample info.
+Using pipe wih some Python scripts I created targets_Hv3_mT_with_tissues.tsv
+cat trans_Hv3_masterTable.gtf | /home/tomasz/Tomasz/Projects/Repos/masterTableAnalysis/Python_scripts/mt_split_targets_with_samples.py | /home/tomasz/Tomasz/Projects/Repos/masterTableAnalysis/Python_scripts/mt_decode_sample.py > targets_Hv3_mT_with_tissues.tsv
+
 
 
 
