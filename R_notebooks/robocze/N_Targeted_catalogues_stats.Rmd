@@ -30,6 +30,13 @@ read.table(file = '~/Desktop/mT/new-masterTable/targets_Hv3_mT.tsv', sep = '\t',
 df_mT
 
 
+# Read targets from masterTable with transcript_ids, target_ids and sample tissue
+# Data contains the header
+read.table(file = '~/Desktop/mT/new-masterTable/targets_Hv3_mT_with_tissues.tsv', sep = '\t', header = TRUE) %>% 
+  as_tibble() -> df_mT_with_tissues
+df_mT_with_tissues
+
+
 # Read transcripts from concatenated catalogues file
 # Data DO NOT contain the header
 read.table(file = '~/Desktop/mT/new-masterTable/Catalogues/concat_catalogues.tsv', sep = '\t', header = FALSE) %>% 
