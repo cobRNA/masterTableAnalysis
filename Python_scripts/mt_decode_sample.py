@@ -19,16 +19,18 @@ with open(PATH, "r", encoding="utf-8") as file:
     lines = file.readlines()
     for l in lines:
         line = l.split()
-        meta_data[line[0]] = line[1]
+        meta_data[line[0]] = line[1:]
 
 # handle the header line
-HEADER = sys.stdin.readline().replace("sample", "tissue")
+HEADER = sys.stdin.readline().replace(
+    "sample", "tissue\tstage\ttechnology\tcapture_status\tbioReplicate\ttechReplicate"
+)
 sys.stdout.write(HEADER)
 
 for l in sys.stdin:
     line = l.split()
-    codes = line[6].strip('";').split(",")
+    codes = line[-1].strip('";').split(",")
     for code in codes:
         # create output string
-        output_line = "\t".join(line[:-1]) + "\t" + meta_data[code] + "\n"
+        output_line = "\t".join(line[:-1]) + "\t" + "\t".join(meta_data[code]) + "\n"
         sys.stdout.write(output_line)  # return the line to stdout
