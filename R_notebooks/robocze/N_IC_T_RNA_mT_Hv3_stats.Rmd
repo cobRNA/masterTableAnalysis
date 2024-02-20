@@ -390,6 +390,94 @@ ALL_vs_RNA_plot
 ```
 
 
+# Targeted/detected chart - ale z naciskiem na % i podziałem na tkanki
+
+## Load data
+```{r}
+# Read targets from targetDesign file
+# Data contains the header
+read.table(file = '~/Desktop/mT/new-masterTable/Hv3_CLS3_targetDesign.tsv', sep = '\t', header = TRUE) %>% 
+  as_tibble() -> df_targets
+df_targets
+
+
+# mT RNA slice using only lncRNA targets
+# Read targets from masterTable with transcript_ids, target_ids and sample tissue
+# Data contains the header
+read.table(file = '~/Desktop/mT/new-masterTable/Target_slicing/targets_TL_RNA_Hv3_ICmT_with_tissues.tsv', sep = '\t', header = TRUE) %>% 
+  as_tibble() -> df_TL_RNA_ICmT_with_tissues
+df_TL_RNA_ICmT_with_tissues
+
+
+# mT RNA slice using lncRNA + putative targets
+# Read targets from masterTable with transcript_ids, target_ids and sample tissue
+# Data contains the header
+read.table(file = '~/Desktop/mT/new-masterTable/Target_slicing/targets_T_RNA_Hv3_ICmT_with_tissues.tsv', sep = '\t', header = TRUE) %>% 
+  as_tibble() -> df_T_RNA_ICmT_with_tissues
+df_T_RNA_ICmT_with_tissues
+
+```
+
+## Plot for lncRNA alone
+```{r}
+#pdf(file = "N_TL_RNA_IC_detected_targets_percent2_tkanka.pdf", width = 8, height = 4)
+df_targets %>% 
+  filter(target_category=="longNonCoding") %>% # Nie ma znaczenia czy pozniej wezmę TL czy samo T, bo w tej linii odfiltrowuję tylko targety lncRNA
+  select(target_id, target_set) %>% 
+  inner_join(x=.,
+            y=(df_TL_RNA_ICmT_with_tissues %>%
+                 filter(tissue=="Brain") %>% # Testis, CpoolA, Brain, Placenta, WBlood, Heart, TpoolA, Liver, iPSC
+                 filter(technology=="ont") %>% # ont, pacBioSII
+                 filter(stage=="Adult") %>% # Adult, Placenta, Embryo
+                 filter(capture_status=="post-capture") %>%
+                 filter(bioReplicate==3) %>%
+                 filter(techReplicate==1) %>%
+                 #filter(grepl('chr', chr)) %>%
+                 distinct(target) %>%  
+                 mutate(status="detected")),
+            by=join_by(target_id==target)) %>%
+  summarise(count=n(), .by=c(target_set, status)) %>% 
+  rbind(df_targets %>% 
+          filter(target_category=="longNonCoding") %>% 
+          select(target_id, target_set) %>%
+          summarise(count=n(), .by=c(target_set)) %>%
+          mutate(status="targeted")) %>%
+  group_by(target_set) %>% 
+  mutate(percentage=count/max(count)) %>% 
+  ggplot(data=.,aes(x=reorder(target_set, -percentage),
+                    y=percentage,
+                    fill=reorder(status, -count))) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_text(aes(label = paste0(scales::percent(percentage), "\n(", scales::comma(count), ")")),
+          position = position_dodge(width=0.9),
+          vjust=-0.25,
+          size = 2.9) +
+  theme_minimal() +
+  ylab('Percentage') +
+  ggtitle(label = "Targeted to detected ratio for each catalogue (WBlood)") + # Testis, CpoolA, Brain, Placenta, WBlood, Heart, TpoolA, Liver, iPSC
+  scale_fill_brewer(palette="Blues", direction = -1) +
+  theme(axis.title.x=element_blank(),
+        axis.text = element_text(colour = "black", size = 11),
+        axis.ticks = element_line(colour = "black"),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        legend.title = element_blank(),
+        legend.position = "top",  #c(0.9, 0.9),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5, size=11)
+        ) +
+  scale_y_continuous(breaks = c(0, 0.25, 0.50, 0.75, 1.00), limits = c(0, 1.11), labels=scales::percent)
+```
+
+
+
+
+
+
+
+
+
+
+
 
 
 

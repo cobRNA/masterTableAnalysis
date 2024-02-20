@@ -214,7 +214,7 @@ df_targets %>%
           size = 2.9) +
   theme_minimal() +
   ylab('Percentage') +
-  ggtitle(label = "Targeted to detected ration for each catalogue") +
+  ggtitle(label = "Targeted to detected ratio for each catalogue") +
   scale_fill_brewer(palette="Blues", direction = -1) +
   theme(axis.title.x=element_blank(),
         axis.text = element_text(colour = "black", size = 11),
@@ -227,6 +227,69 @@ df_targets %>%
         ) +
   scale_y_continuous(breaks = c(0, 0.25, 0.50, 0.75, 1.00), limits = c(0, 1.11), labels=scales::percent)
 ```
+
+
+# Targeted/detected chart - ale z naciskiem na % i z podziałem na tkanki
+```{r}
+#pdf(file = "N_detected_targets_percent2_tkanka.pdf", width = 8, height = 4)
+df_targets %>% 
+  filter(target_category=="longNonCoding") %>%
+  select(target_id, target_set) %>% 
+  inner_join(x=.,
+            y=(df_mT_with_tissues %>%
+                 filter(tissue=="Heart") %>% # Testis, CpoolA, Brain, Placenta, WBlood, Heart, TpoolA, Liver, iPSC
+                 filter(technology=="ont") %>% # ont, pacBioSII
+                 filter(stage=="Embryo") %>%
+                 filter(capture_status=="post-capture") %>%
+                 filter(bioReplicate==1) %>%
+                 filter(techReplicate==1) %>%
+                 #filter(endSupport=="noCageNoPolyASupported") %>% # polyAOnlySupported, noCageNoPolyASupported, cagePolyASupported, cageOnlySupported
+                 filter(grepl('chr', chr)) %>%
+                 distinct(target) %>% 
+                 mutate(status="detected")),
+            by=join_by(target_id==target)) %>%
+  summarise(count=n(), .by=c(target_set, status)) %>% 
+  rbind(df_targets %>% 
+          filter(target_category=="longNonCoding") %>% 
+          select(target_id, target_set) %>%
+          summarise(count=n(), .by=c(target_set)) %>%
+          mutate(status="targeted")) %>%
+  group_by(target_set) %>% 
+  mutate(percentage=count/max(count)) %>% 
+  ggplot(data=.,aes(x=reorder(target_set, -percentage),
+                    y=percentage,
+                    fill=reorder(status, -count))) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_text(aes(label = paste0(scales::percent(percentage), "\n(", scales::comma(count), ")")),
+          position = position_dodge(width=0.9),
+          vjust=-0.25,
+          size = 2.9) +
+  theme_minimal() +
+  ylab('Percentage') +
+  ggtitle(label = "Targeted to detected ratio for each catalogue (Brain)") +
+  scale_fill_brewer(palette="Blues", direction = -1) +
+  theme(axis.title.x=element_blank(),
+        axis.text = element_text(colour = "black", size = 11),
+        axis.ticks = element_line(colour = "black"),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        legend.title = element_blank(),
+        legend.position = "top",  #c(0.9, 0.9),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5, size=11)
+        ) +
+  scale_y_continuous(breaks = c(0, 0.25, 0.50, 0.75, 1.00), limits = c(0, 1.11), labels=scales::percent)
+```
+
+
+
+```{r}
+df_mT_with_tissues %>%
+                 distinct(stage)
+
+# Testis, CpoolA, Brain, Placenta, WBlood, Heart, TpoolA, Liver, iPSC
+
+```
+
 
 
 
