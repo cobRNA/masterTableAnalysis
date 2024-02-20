@@ -1,3 +1,12 @@
+# Not yet ready files
+/Data/Processed
+
+# Too large for GitHub but important files
+/Data/Source/hg38.polyAsignals.bed
+
+# Too many files, look for zipped in same dir
+/Utils/jlagarde
+
 # Junk files and directories
 Random/
 notes
@@ -8,14 +17,3 @@ mt_rna_slice_by_target_single.py
 /R_notebooks/robocze/*.html
 /R_notebooks/.Rproj.user
 /R_notebooks/.Rhistory
-
-
-# Not yet ready files
-/Data/Processed
-
-
-# Too large for GitHub but important files
-/Data/Source/hg38.polyAsignals.bed
-
-# Too many files, look for zipped in same dir
-/Utils/jlagarde
