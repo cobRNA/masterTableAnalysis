@@ -392,18 +392,34 @@ bedtools intersect -s -wao -a tmerged_T_RNA_ICmT_and_catalogs.gtf -b tmerged_T_R
 
 
 #######################################################################################
-############################ Targets analysis #########################################
+####################### Targets analysis ON FULL mT ###################################
 #######################################################################################
 
-I needed to perform statistics for mT (or later IC-mt) regarding targets detection rate by tissue.
+I needed to perform statistics for mT (or later IC-mT) regarding targets detection rate by tissue.
 I had to prepare dataframe having transcript ids, target ids, and sample info.
 Using pipe wih some Python scripts I created targets_Hv3_mT_with_tissues.tsv
 cat trans_Hv3_masterTable.gtf | /home/tomasz/Tomasz/Projects/Repos/masterTableAnalysis/Python_scripts/mt_split_targets_with_samples.py | /home/tomasz/Tomasz/Projects/Repos/masterTableAnalysis/Python_scripts/mt_decode_sample.py > targets_Hv3_mT_with_tissues.tsv
 
+Same for IC-mT
+Using pipe wih some Python scripts I created targets_Hv3_ICmT_with_tissues.tsv
+cat trans_Hv3_splicedmasterTable.gtf | /home/tomasz/Tomasz/Projects/Repos/masterTableAnalysis/Python_scripts/mt_split_targets_with_samples.py | /home/tomasz/Tomasz/Projects/Repos/masterTableAnalysis/Python_scripts/mt_decode_sample.py > targets_Hv3_ICmT_with_tissues.tsv
 
 
+#######################################################################################
+#################### Targets analysis ON TARGET RNA SLICE #############################
+#######################################################################################
+I just used RNA slice as input. ONLY FOR IC-mT
 
+I needed to perform statistics for IC-mT regarding targets detection rate by tissue.
+I had to prepare dataframe having transcript ids, target ids, and sample info.
+>> ONLY lncRNA slice
+Using pipe wih some Python scripts I created targets_TL_RNA_Hv3_ICmT_with_tissues.tsv
+cat TL_RNA_Hv3_splicedmasterTable.gtf | /home/tomasz/Tomasz/Projects/Repos/masterTableAnalysis/Python_scripts/mt_split_targets_with_samples.py | /home/tomasz/Tomasz/Projects/Repos/masterTableAnalysis/Python_scripts/mt_decode_sample.py > targets_TL_RNA_Hv3_ICmT_with_tissues.tsv
 
+> lncRNA and putative slice
+Same for IC-mT
+Using pipe wih some Python scripts I created targets_T_RNA_Hv3_ICmT_with_tissues.tsv
+cat T_RNA_Hv3_splicedmasterTable.gtf | /home/tomasz/Tomasz/Projects/Repos/masterTableAnalysis/Python_scripts/mt_split_targets_with_samples.py | /home/tomasz/Tomasz/Projects/Repos/masterTableAnalysis/Python_scripts/mt_decode_sample.py > targets_T_RNA_Hv3_ICmT_with_tissues.tsv
 
 
 
