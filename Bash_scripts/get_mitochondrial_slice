@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+
+#---------------------
+# Aquire IDs
+#---------------------
+
+
+#----- IMPI
+# Downloaded latest version as IMPI 2021 version (IMPI-2021-Q4pre) xlsx file from:
+# https://www.mrc-mbu.cam.ac.uk/research-resources-and-facilities/impi
+# Saved only ENSEMBL column as impi-2021-q4pre-20211001-dist_0.ids
+
+
+#----- MitoCarta3.0
+# Downloaded latest version as Human.MitoCarta3.0.xls file from:
+# https://www.broadinstitute.org/mitocarta/mitocarta30-inventory-mammalian-mitochondrial-proteins-and-pathways
+# Saved only EnsemblGeneID_mapping_version_20200130 column from A Human MitoCarta3.0 sheet as csv file
+# Some lines contained multiple IDs separated by |
+# I splitted them using:
+cat ./Data/Mitochondrial_catalogues/Human.MitoCarta3.0.csv | sed -z 's/|/\n/g' > ./Data/Mitochondrial_catalogues/Human.MitoCarta3.0.ids
+
+
+#----- IMPI and MitoCarta3.0
+# ID files from both catalogues where concatenated, duplicates were removed using:
+cat ./Data/Mitochondrial_catalogues/impi-2021-q4pre-20211001-dist_0.ids ./Data/Mitochondrial_catalogues/Human.MitoCarta3.0.ids | sort | uniq > ./Data/Mitochondrial_catalogues/impi_and_MitoCarta.ids
+
+
+#---------------------
+# Prepare gencode.v45.annotation slices
+#---------------------
+
+#----- Gencode.v45.annotation
+# Comprehensive gene annotation gtf file was downloaded from https://www.gencodegenes.org/human/
+
+#----- IMPI
+zcat ./Data/Mitochondrial_catalogues/gencode.v45.annotation.gtf.gz | grep -f ./Data/Mitochondrial_catalogues/impi-2021-q4pre-20211001-dist_0.ids > ./Data/Processed/Mitochondrial/impi_gencode.v45.annotation_slice.gtf
+
+#----- MitoCarta3.0
+zcat ./Data/Mitochondrial_catalogues/gencode.v45.annotation.gtf.gz | grep -f ./Data/Mitochondrial_catalogues/Human.MitoCarta3.0.ids > ./Data/Processed/Mitochondrial/MitoCarta3.0_gencode.v45.annotation_slice.gtf
+
+#----- IMPI and MitoCarta3.0
+zcat ./Data/Mitochondrial_catalogues/gencode.v45.annotation.gtf.gz | grep -f ./Data/Mitochondrial_catalogues/impi_and_MitoCarta.ids > ./Data/Processed/Mitochondrial/impi_and_MitoCarta_gencode.v45.annotation_slice.gtf
+
+
+
+#---------------------
+# Prepare masterTable slices
+#---------------------
+
+#----- masterTable annotation
+# Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged gtf file was downloaded from https://github.com/guigolab/gencode-cls-master-table/releases
+
+#----- IMPI
+zcat ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.gff.gz | grep -f ./Data/Mitochondrial_catalogues/impi-2021-q4pre-20211001-dist_0.ids > ./Data/Processed/Mitochondrial/impi_mT_Hv3_enhancedCLS3_slice.gtf
+
+#----- MitoCarta3.0
+zcat ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.gff.gz | grep -f ./Data/Mitochondrial_catalogues/Human.MitoCarta3.0.ids > ./Data/Processed/Mitochondrial/MitoCarta3.0_mT_Hv3_enhancedCLS3_slice.gtf
+
+#----- IMPI and MitoCarta3.0
+zcat ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.gff.gz | grep -f ./Data/Mitochondrial_catalogues/impi_and_MitoCarta.ids > ./Data/Processed/Mitochondrial/impi_and_MitoCarta_mT_Hv3_enhancedCLS3_slice.gtf
+
+
+#---------------------
+# Calculate stats
+#---------------------
+
+#----- Gencode.v45.annotation slices
+#------------
+
+#---- impi_gencode.v45.annotation_slice.gtf
+cat ./Data/Processed/Mitochondrial/impi_gencode.v45.annotation_slice.gtf | awk '$3=="transcript"' | awk '{print $10}' | sort | uniq | wc -l
+# Uniq gene_ids: 23064
+cat ./Data/Processed/Mitochondrial/impi_gencode.v45.annotation_slice.gtf | awk '$3=="transcript"' | awk '{print $12}' | sort | uniq | wc -l
+# Uniq transcript_ids: 173963
+
+#---- MitoCarta3.0_gencode.v45.annotation_slice.gtf
+cat ./Data/Processed/Mitochondrial/MitoCarta3.0_gencode.v45.annotation_slice.gtf | awk '$3=="transcript"' | awk '{print $10}' | sort | uniq | wc -l
+# Uniq gene_ids: 1137
+cat ./Data/Processed/Mitochondrial/MitoCarta3.0_gencode.v45.annotation_slice.gtf | awk '$3=="transcript"' | awk '{print $12}' | sort | uniq | wc -l
+# Uniq transcript_ids: 11718
+
+#---- impi_and_MitoCarta_gencode.v45.annotation_slice.gtf
+cat ./Data/Processed/Mitochondrial/impi_and_MitoCarta_gencode.v45.annotation_slice.gtf | awk '$3=="transcript"' | awk '{print $10}' | sort | uniq | wc -l
+# Uniq gene_ids: 23068
+cat ./Data/Processed/Mitochondrial/impi_and_MitoCarta_gencode.v45.annotation_slice.gtf | awk '$3=="transcript"' | awk '{print $12}' | sort | uniq | wc -l
+# Uniq transcript_ids: 173993
+
+
+#----- masterTable annotation slices
+#------------
+
+#---- impi_mT_Hv3_enhancedCLS3_slice.gtf
+cat ./Data/Processed/Mitochondrial/impi_mT_Hv3_enhancedCLS3_slice.gtf | awk '$3=="transcript"' | awk '{print $10}' | sort | uniq | wc -l
+# Uniq gene_ids: 23073
+cat ./Data/Processed/Mitochondrial/impi_mT_Hv3_enhancedCLS3_slice.gtf | awk '$3=="transcript"' | awk '{print $12}' | sort | uniq | wc -l
+# Uniq transcript_ids: 174381
+
+#---- MitoCarta3.0_mT_Hv3_enhancedCLS3_slice.gtf
+cat ./Data/Processed/Mitochondrial/MitoCarta3.0_mT_Hv3_enhancedCLS3_slice.gtf | awk '$3=="transcript"' | awk '{print $10}' | sort | uniq | wc -l
+# Uniq gene_ids: 1139
+cat ./Data/Processed/Mitochondrial/MitoCarta3.0_mT_Hv3_enhancedCLS3_slice.gtf | awk '$3=="transcript"' | awk '{print $12}' | sort | uniq | wc -l
+# Uniq transcript_ids: 11741
+
+#---- impi_and_MitoCarta_mT_Hv3_enhancedCLS3_slice.gtf
+cat ./Data/Processed/Mitochondrial/impi_and_MitoCarta_mT_Hv3_enhancedCLS3_slice.gtf | awk '$3=="transcript"' | awk '{print $10}' | sort | uniq | wc -l
+# Uniq gene_ids: 23077
+cat ./Data/Processed/Mitochondrial/impi_and_MitoCarta_mT_Hv3_enhancedCLS3_slice.gtf | awk '$3=="transcript"' | awk '{print $12}' | sort | uniq | wc -l
+# Uniq transcript_ids: 174411
+
+
+
+
+
+
+
+
+
+
