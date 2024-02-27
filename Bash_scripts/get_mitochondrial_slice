@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+
 #---------------------
 # Aquire IDs
 #---------------------
@@ -32,13 +33,14 @@ cat ./Data/Mitochondrial_catalogues/impi-2021-q4pre-20211001-dist_0.ids ./Data/M
 #----- Gencode.v45.annotation
 # Comprehensive gene annotation gtf file was downloaded from https://www.gencodegenes.org/human/
 
-
 for id_file in ./Data/Mitochondrial_catalogues/*ids
     do
         filename=$(basename -- "$id_file")
         extension="${filename##*.}"
         filename="${filename%.*}"
-        zcat ./Data/Mitochondrial_catalogues/gencode.v45.annotation.gtf.gz | grep -f $id_file > ./Data/Processed/Mitochondrial/$filename.gencode.v45.annotation_slice.gtf
+        echo $filename
+        zcat ./Data/Mitochondrial_catalogues/gencode.v45.annotation.gtf.gz | grep -f $id_file > ./Data/Processed/Mitochondrial/${filename}.gencode.v45.annotation_slice.gtf
+        cat ./Data/Processed/Mitochondrial/$filename.gencode.v45.annotation_slice.gtf | awk '{print $10}' | sed 's/"//g ; s/;//g'| awk -F'.' '{print $1}' | sort | uniq | grep -vf - $id_file > ./Data/Processed/Mitochondrial/${filename}.gencode.v45.annotation_slice.missing.ids
     done;
 
 
@@ -56,6 +58,7 @@ for id_file in ./Data/Mitochondrial_catalogues/*ids
         extension="${filename##*.}"
         filename="${filename%.*}"
         zcat ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.gff.gz | grep -f $id_file > ./Data/Processed/Mitochondrial/${filename}_mT_Hv3_enhancedCLS3_slice.gtf
+        cat ./Data/Processed/Mitochondrial/${filename}_mT_Hv3_enhancedCLS3_slice.gtf | awk '{print $10}' | sed 's/"//g ; s/;//g'| awk -F'.' '{print $1}' | sort | uniq | grep -vf - $id_file > ./Data/Processed/Mitochondrial/${filename}_mT_Hv3_enhancedCLS3_slice.missing.ids
     done;
 
 
@@ -69,21 +72,27 @@ for annotation_slice in ./Data/Processed/Mitochondrial/*.gtf
         filename=$(basename -- "$annotation_slice")
         extension="${filename##*.}"
         filename="${filename%.*}"
-        gene_ids=$(cat $annotation_slice | awk '$3=="transcript"' | awk '{print $10}' | awk '$1 !~ /_PAR_Y/' | awk -F'.' '{print$1}' | sort | uniq | wc -l)
+        echo $filename
+        missing_gene_ids=$(cat ./Data/Processed/Mitochondrial/${filename}.missing.ids | sort | uniq | wc -l)
+        slice_gene_ids=$(cat $annotation_slice | awk '{print $10}' | sort | uniq | wc -l)
         transcript_ids=$(cat $annotation_slice | awk '$3=="transcript"' | awk '{print $12}' | sort | uniq | wc -l)
 
         printf '%s:\n' "$filename" >> ./Data/Processed/Mitochondrial/mito_stats
-        printf 'Uniq gene_ids: %s\n' "$gene_ids" >> ./Data/Processed/Mitochondrial/mito_stats
-        printf 'Uniq transcript_ids: %s\n' "$transcript_ids" >> ./Data/Processed/Mitochondrial/mito_stats
+        printf 'Missing gene_ids: %s\n' "$missing_gene_ids" >> ./Data/Processed/Mitochondrial/mito_stats
+        printf 'Common gene_ids: %s\n' "$slice_gene_ids" >> ./Data/Processed/Mitochondrial/mito_stats
+        printf 'Commontranscript_ids: %s\n' "$transcript_ids" >> ./Data/Processed/Mitochondrial/mito_stats
         printf '%s\n' "-----------------------" >> ./Data/Processed/Mitochondrial/mito_stats
     done
 
 # "ENST00000482405.7_PAR_Y"; <- id sztucznie zwiększające liczbę genów
 
-# sed "s/_PAR_Y//g"
+# sed "s/_PAR_Y//g"   
+#  awk '$1 !~ /_PAR_Y/' | awk -F'.' '{print$1}' |
 
-
-
+# echo $filename
+#         gene_ids=$(cat $annotation_slice | awk '$3=="transcript"' | awk '{print $10}' | sort | uniq | wc -l)
+#         missing_gene_ids=$(cat ${filename}.missing.ids | awk '$3=="transcript"' | awk '{print $10}' | sort | uniq | wc -l)
+#         transcript_ids=$(cat $annotation_slice | awk '$3=="transcript"' | awk '{print $12}' | sort | uniq | wc -l)
 
 
 
