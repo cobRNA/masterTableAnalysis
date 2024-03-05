@@ -13,7 +13,7 @@ do
     while read end dist
     do
         echo $end
-        cat $file | ./Utils/extractTranscriptEndsFromBed12.pl $end | ./Utils/sortbed  > ./Data/Processed/Extracted_ends/$lab.$end.bed
+        cat $file | ./Utils/extractTranscriptEndsFromBed12.pl $end | ./Utils/sortbed > ./Data/Processed/Extracted_ends/$lab.$end.bed
     done < ./Data/Source/ends.dist.tsv
 done
 
