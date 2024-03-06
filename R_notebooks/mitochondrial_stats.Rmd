@@ -1,0 +1,83 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Load Libraries
+```{r}
+library(dplyr)
+library(ggplot2)
+library(ggVennDiagram)
+```
+
+
+# Load data
+```{r}
+df_mito <- read.delim("../Data/Mitochondrial_catalogues/Human.MitoCarta3.0.ids",
+                      sep="\t",
+                      header = FALSE)
+colnames(df_mito) <- c("gene_id")
+
+df_impi <- read.delim("../Data/Mitochondrial_catalogues/impi-2021-q4pre-20211001-dist_0.ids",
+                      sep="\t",
+                      header = FALSE)
+colnames(df_impi) <- c("gene_id")
+
+df_gencode <- read.delim("../Data/Mitochondrial_catalogues/gencode.v45.annotation.ids",
+                      sep="\t",
+                      header = FALSE)
+colnames(df_gencode) <- c("gene_id",
+                          "transcript_id")
+
+df_mT <- read.delim("../Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.ids",
+                      sep="\t",
+                      header = FALSE)
+colnames(df_mT) <- c("gene_id",
+                     "transcript_id")
+```
+"Human.MitoCarta3.0",
+"impi-2021-q4pre-20211001-dist_0",
+"gencode.v45.annotation",
+"Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged"
+
+# Venn diagram
+```{r}
+venn_all <- ggVennDiagram(list(Gencode = df_gencode$gene_id,
+                               masterTable = df_mT$gene_id,
+                               Mitocarta = df_mito$gene_id,
+                               Impi = df_impi$gene_id),
+                          label_alpha = 0) +
+  scale_fill_gradient(low = "#c0ddf0", high = "#4981BF") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+venn_gencode <- ggVennDiagram(list(Gencode = df_gencode$gene_id,
+                                   Mitocarta = df_mito$gene_id,
+                                   Impi = df_impi$gene_id),
+                              label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF", trans = "log") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+venn_mT <- ggVennDiagram(list(masterTable = df_mT$gene_id,
+                              Mitocarta = df_mito$gene_id,
+                              Impi = df_impi$gene_id),
+                         label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF", trans = "log") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+#pdf(file = "../Plots/mitochondrial_gene_id_venn.pdf", width = 6, height = 4)
+venn_all
+venn_gencode
+venn_mT
+#dev.off()
+```
+
+
+
+
+
+
+
+
