@@ -5,6 +5,13 @@
 # Aquire IDs
 #---------------------
 
+#----- Gencode.v45 !! Removed version no. from gene_id and transcript_id ::: ENSG00000290825.1 -> ENSG00000290825
+zcat ./Data/Mitochondrial_catalogues/gencode.v45.annotation.gtf.gz | awk 'NR>5{print$0}' | awk '$3=="transcript"' | ./Utils/extract.gtf.tags.sh - gene_id,transcript_id | awk -F'\t' 'gsub(/\.[0-9]+/,""){print $1"\t"$2}' > ./Data/Mitochondrial_catalogues/gencode.v45.annotation.ids
+
+
+#----- Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged !! Removed version no. from gene_id and transcript_id ::: ENSG00000290825.1 -> ENSG00000290825
+zcat ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.gff.gz | ./Utils/extract.gtf.tags.sh - gene_id,transcript_id | awk -F'\t' 'gsub(/\.[0-9]+/,""){print $1"\t"$2}' > ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.ids
+
 
 #----- IMPI
 # Downloaded latest version as IMPI 2021 version (IMPI-2021-Q4pre) xlsx file from:
@@ -80,7 +87,7 @@ for annotation_slice in ./Data/Processed/Mitochondrial/*.gtf
         printf '%s:\n' "$filename" >> ./Data/Processed/Mitochondrial/mito_stats
         printf 'Missing gene_ids: %s\n' "$missing_gene_ids" >> ./Data/Processed/Mitochondrial/mito_stats
         printf 'Common gene_ids: %s\n' "$slice_gene_ids" >> ./Data/Processed/Mitochondrial/mito_stats
-        printf 'Commontranscript_ids: %s\n' "$transcript_ids" >> ./Data/Processed/Mitochondrial/mito_stats
+        printf 'Common transcript_ids: %s\n' "$transcript_ids" >> ./Data/Processed/Mitochondrial/mito_stats
         printf '%s\n' "-----------------------" >> ./Data/Processed/Mitochondrial/mito_stats
     done
 
@@ -93,6 +100,16 @@ for annotation_slice in ./Data/Processed/Mitochondrial/*.gtf
 #         gene_ids=$(cat $annotation_slice | awk '$3=="transcript"' | awk '{print $10}' | sort | uniq | wc -l)
 #         missing_gene_ids=$(cat ${filename}.missing.ids | awk '$3=="transcript"' | awk '{print $10}' | sort | uniq | wc -l)
 #         transcript_ids=$(cat $annotation_slice | awk '$3=="transcript"' | awk '{print $12}' | sort | uniq | wc -l)
+
+
+
+#---------------------
+# Prepare data for Venn diagram in R
+#---------------------
+
+
+
+
 
 
 
