@@ -10,7 +10,7 @@ zcat ./Data/Mitochondrial_catalogues/gencode.v45.annotation.gtf.gz | awk 'NR>5{p
 
 
 #----- Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged !! Removed version no. from gene_id and transcript_id ::: ENSG00000290825.1 -> ENSG00000290825
-zcat ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.gff.gz | ./Utils/extract.gtf.tags.sh - gene_id,transcript_id | awk -F'\t' 'gsub(/\.[0-9]+/,""){print $1"\t"$2}' > ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.ids
+zcat ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.gff.gz | ./Utils/extract.gtf.tags.sh - gene_id,transcript_id | awk -F'\t' 'gsub(/\.[0-9]+/,""){print $1"\t"$2}' | sort | uniq > ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.ids
 
 
 #----- IMPI
