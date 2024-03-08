@@ -128,7 +128,7 @@ df_mT_composition <-
   replace(is.na(.),"other") %>% 
   mutate(data_source = "masterTable")
 
-
+# Stacked bar plot for gencode and masterTable
 bind_rows(df_gencode_composition, df_mT_composition) %>% 
   group_by(data_source, catalogue) %>% 
   summarise(number_of_transcripts = n()) %>% 
@@ -144,24 +144,100 @@ bind_rows(df_gencode_composition, df_mT_composition) %>%
             size = 4) +
   theme_minimal() +
   scale_fill_manual(values=c("#ea8553", "#d386b7", "#6fb293", "#728fb4")) +  # "#93ae55", "#d70e17", "#1887ab", "#a9629f"
-  ylab('Percentage') +
+  ylab('Percentage of transcript ids') +
   xlab('Data source') +
   theme(legend.position = "none",
         axis.ticks.y = element_line(colour = "black"),
         plot.title = element_text(hjust = 0.5,
-                                  size=9.0),
+                                  size=11.0),
         panel.background = element_rect(fill = NA),
         panel.grid.major.x = element_line(colour = NA),
         panel.grid.minor.x = element_line(colour = NA),
         axis.text.y = element_text(colour="black",
                                   face="bold")) +
-  #ggtitle(label="Transcript composition of masterTable and Gencode v.45 annotations") +
+  ggtitle(label="Number of Gencode and masterTable transcripts common with MitoCarta, Impi or both databases") +
   scale_y_continuous(labels = scales::percent_format(),
-                     limits = c(0,1)) -> bar_plot_composition
+                     limits = c(0,1)) -> bar_plot_gen_mT_composition
   
-  
-#pdf(file = "../Plots/mitochondrial_transcripts_composition_barplot.pdf", width = 6, height = 4)
-bar_plot_composition
 
+# Stacked bar plot for mitoCarta and impi
+df_only_gencode <-
+  left_join(x=(df_gencode %>% 
+                 select(gene_id) %>% 
+                 distinct(gene_id)),
+            y=(df_mT %>% 
+                 select(gene_id) %>% 
+                 distinct(gene_id)), by="gene_id", keep=TRUE) %>% 
+  filter(is.na(gene_id.y)) %>%
+  select(gene_id.x) %>% 
+  rename(gene_id = gene_id.x) %>% 
+  mutate(catalogue="gencode")
+  
+df_only_mT <-
+  left_join(x=(df_mT %>%
+                 select(gene_id) %>% 
+                 distinct(gene_id)),
+            y=(df_gencode %>% 
+                 select(gene_id) %>% 
+                 distinct(gene_id)), by="gene_id", keep=TRUE) %>% 
+  filter(is.na(gene_id.y)) %>%
+  select(gene_id.x) %>% 
+  rename(gene_id = gene_id.x) %>% 
+  mutate(catalogue="masterTable")
+
+df_gencode_mt_intersect <-
+  inner_join(x=(df_gencode %>% 
+                  select(gene_id) %>% 
+                  distinct(gene_id)),
+             y=(df_mT %>% 
+                  select(gene_id) %>% 
+                  distinct(gene_id)), by="gene_id") %>% 
+  mutate(catalogue="gencode+masterTable")
+
+df_mito_composition <-
+  left_join(x=df_mito, y=(bind_rows(df_only_gencode, df_only_mT, df_gencode_mt_intersect)), by="gene_id") %>% 
+  replace(is.na(.),"other") %>% 
+  mutate(data_source = "MitoCarta3.0")
+
+df_impi_composition <-
+  left_join(x=df_impi, y=(bind_rows(df_only_gencode, df_only_mT, df_gencode_mt_intersect)), by="gene_id") %>% 
+  replace(is.na(.),"other") %>% 
+  mutate(data_source = "IMPI-2021-Q4pre")
+
+# Stacked bar plot for mitoCarta and impi
+bind_rows(df_mito_composition, df_impi_composition) %>% 
+  group_by(data_source, catalogue) %>% 
+  summarise(number_of_genes = n()) %>% 
+  mutate(percent = prop.table(number_of_genes)) %>% 
+  # Plot data using barplot
+  ggplot(data=.,
+         aes(x=data_source,
+             y=percent,
+             fill=factor(catalogue, levels=c("other", "gencode", "gencode+masterTable", "masterTable")))) + 
+  geom_bar(stat="identity") +
+  geom_text(aes(label = paste0(catalogue, " (", scales::comma(number_of_genes), ")")),
+            position=position_stack(vjust=0.5),
+            size = 3.8) +
+  theme_minimal() +
+  scale_fill_manual(values=c("#ea8553", "#d386b7", "#6fb293", "#728fb4")) +  # "#93ae55", "#d70e17", "#1887ab", "#a9629f"
+  ylab('Percentage of gene ids') +
+  xlab('Data source') +
+  theme(legend.position = "none",
+        axis.ticks.y = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5,
+                                  size=11.0),
+        panel.background = element_rect(fill = NA),
+        panel.grid.major.x = element_line(colour = NA),
+        panel.grid.minor.x = element_line(colour = NA),
+        axis.text.y = element_text(colour="black",
+                                  face="bold")) +
+  ggtitle(label="Number of MitoCarta and Impi genes common with gencode, masterTable or both annotations") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1)) -> bar_plot_mito_impi_composition
+
+
+#pdf(file = "../Plots/mitochondrial_transcripts_composition_barplot.pdf", width = 6, height = 8)
+bar_plot_gen_mT_composition
+bar_plot_mito_impi_composition
 ```
 
