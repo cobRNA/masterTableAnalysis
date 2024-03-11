@@ -16,7 +16,7 @@ zcat ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.gff.
 #----- IMPI
 # Downloaded latest version as IMPI 2021 version (IMPI-2021-Q4pre) xlsx file from:
 # https://www.mrc-mbu.cam.ac.uk/research-resources-and-facilities/impi
-# Saved only ENSEMBL column as impi-2021-q4pre-20211001-dist_0.ids
+# Saved only ENSEMBL column with Verifid Mitochondrial IMPI Class as impi-2021-q4pre-20211001-dist_0.ids
 
 
 #----- MitoCarta3.0
