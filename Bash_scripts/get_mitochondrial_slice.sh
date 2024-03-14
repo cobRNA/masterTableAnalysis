@@ -5,12 +5,16 @@
 # Aquire IDs
 #---------------------
 
-#----- Gencode.v45 !! Removed version no. from gene_id and transcript_id ::: ENSG00000290825.1 -> ENSG00000290825
-zcat ./Data/Mitochondrial_catalogues/gencode.v45.annotation.gtf.gz | awk 'NR>5{print$0}' | awk '$3=="transcript"' | ./Utils/extract.gtf.tags.sh - gene_id,transcript_id | awk -F'\t' 'gsub(/\.[0-9]+/,""){print $1"\t"$2}' > ./Data/Mitochondrial_catalogues/gencode.v45.annotation.ids
+#----- Gencode.v45
+# Removed version no. from gene_id and transcript_id ::: ENSG00000290825.1 -> ENSG00000290825
+# Removed _PAR_Y from the end of gene_id and transcript_id
+zcat ./Data/Mitochondrial_catalogues/gencode.v45.annotation.gtf.gz | awk 'NR>5{print$0}' | awk '$3=="transcript"' | ./Utils/extract.gtf.tags.sh - gene_id,transcript_id | awk -F'\t' 'gsub(/\.[0-9]+/,""){print $1"\t"$2}' | sed 's/_PAR_Y//g' > ./Data/Mitochondrial_catalogues/gencode.v45.annotation.ids
 
 
-#----- Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged !! Removed version no. from gene_id and transcript_id ::: ENSG00000290825.1 -> ENSG00000290825
-zcat ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.gff.gz | awk '$3=="transcript"' | ./Utils/extract.gtf.tags.sh - gene_id,transcript_id | awk -F'\t' 'gsub(/\.[0-9]+/,""){print $1"\t"$2}' > ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.ids
+#----- Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged
+# Removed version no. from gene_id and transcript_id ::: ENSG00000290825.1 -> ENSG00000290825
+# Removed _PAR_Y from the end of gene_id and transcript_id
+zcat ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.gff.gz | awk '$3=="transcript"' | ./Utils/extract.gtf.tags.sh - gene_id,transcript_id | awk -F'\t' 'gsub(/\.[0-9]+/,""){print $1"\t"$2}' | sed 's/_PAR_Y//g' > ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.ids
 
 
 #----- IMPI
@@ -46,8 +50,12 @@ for id_file in ./Data/Mitochondrial_catalogues/*ids
         extension="${filename##*.}"
         filename="${filename%.*}"
         echo $filename
+        # Prepare slice
         zcat ./Data/Mitochondrial_catalogues/gencode.v45.annotation.gtf.gz | grep -f $id_file > ./Data/Processed/Mitochondrial/${filename}.gencode.v45.annotation_slice.gtf
-        cat ./Data/Processed/Mitochondrial/$filename.gencode.v45.annotation_slice.gtf | awk '{print $10}' | sed 's/"//g ; s/;//g'| awk -F'.' '{print $1}' | sort | uniq | grep -vf - $id_file > ./Data/Processed/Mitochondrial/${filename}.gencode.v45.annotation_slice.missing.ids
+        # Extract slice ids
+        cat ./Data/Processed/Mitochondrial/${filename}.gencode.v45.annotation_slice.gtf | awk 'NR>5{print$0}' | awk '$3=="transcript"' | ./Utils/extract.gtf.tags.sh - gene_id,transcript_id | awk -F'\t' 'gsub(/\.[0-9]+/,""){print $1"\t"$2}' | sed 's/_PAR_Y//g' > ./Data/Processed/Mitochondrial/${filename}.gencode.v45.annotation_slice.ids
+        # Extract missing ids
+        cat ./Data/Processed/Mitochondrial/${filename}.gencode.v45.annotation_slice.gtf | awk '{print $10}' | sed 's/"//g ; s/;//g'| awk -F'.' '{print $1}' | sed 's/_PAR_Y//g' | sort | uniq | grep -vf - $id_file > ./Data/Processed/Mitochondrial/${filename}.gencode.v45.annotation_slice.missing.ids      
     done;
 
 
@@ -64,8 +72,12 @@ for id_file in ./Data/Mitochondrial_catalogues/*ids
         filename=$(basename -- "$id_file")
         extension="${filename##*.}"
         filename="${filename%.*}"
+        # Prepare slice
         zcat ./Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.gff.gz | grep -f $id_file > ./Data/Processed/Mitochondrial/${filename}_mT_Hv3_enhancedCLS3_slice.gtf
-        cat ./Data/Processed/Mitochondrial/${filename}_mT_Hv3_enhancedCLS3_slice.gtf | awk '{print $10}' | sed 's/"//g ; s/;//g'| awk -F'.' '{print $1}' | sort | uniq | grep -vf - $id_file > ./Data/Processed/Mitochondrial/${filename}_mT_Hv3_enhancedCLS3_slice.missing.ids
+        # Extract slice ids
+        cat ./Data/Processed/Mitochondrial/${filename}_mT_Hv3_enhancedCLS3_slice.gtf | awk '$3=="transcript"' | ./Utils/extract.gtf.tags.sh - gene_id,transcript_id | awk -F'\t' 'gsub(/\.[0-9]+/,""){print $1"\t"$2}' | sed 's/_PAR_Y//g' > ./Data/Processed/Mitochondrial/${filename}_mT_Hv3_enhancedCLS3_slice.ids
+        # Extract missing ids
+        cat ./Data/Processed/Mitochondrial/${filename}_mT_Hv3_enhancedCLS3_slice.gtf | awk '{print $10}' | sed 's/"//g ; s/;//g'| awk -F'.' '{print $1}' | sed 's/_PAR_Y//g' | sort | uniq | grep -vf - $id_file > ./Data/Processed/Mitochondrial/${filename}_mT_Hv3_enhancedCLS3_slice.missing.ids
     done;
 
 
