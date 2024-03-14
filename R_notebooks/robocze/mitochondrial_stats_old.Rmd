@@ -1,0 +1,243 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Load Libraries
+```{r}
+library(dplyr)
+library(ggplot2)
+library(ggVennDiagram)
+```
+
+
+# Load data
+```{r}
+df_mito <- read.delim("../Data/Mitochondrial_catalogues/Human.MitoCarta3.0.ids",
+                      sep="\t",
+                      header = FALSE)
+colnames(df_mito) <- c("gene_id")
+
+
+df_impi <- read.delim("../Data/Mitochondrial_catalogues/impi-2021-q4pre-20211001-dist_0.ids",
+                      sep="\t",
+                      header = FALSE)
+colnames(df_impi) <- c("gene_id")
+
+df_mito_impi <- df_mito %>% 
+  bind_rows(df_impi) %>% 
+  distinct()
+
+df_gencode <- read.delim("../Data/Mitochondrial_catalogues/gencode.v45.annotation.ids",
+                      sep="\t",
+                      header = FALSE)
+colnames(df_gencode) <- c("gene_id",
+                          "transcript_id")
+
+df_mT <- read.delim("../Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.ids",
+                      sep="\t",
+                      header = FALSE)
+colnames(df_mT) <- c("gene_id",
+                     "transcript_id")
+```
+"Human.MitoCarta3.0",
+"impi-2021-q4pre-20211001-dist_0",
+"gencode.v45.annotation",
+"Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged"
+
+# Venn diagram
+```{r}
+venn_all <- ggVennDiagram(list(Gencode = df_gencode$gene_id,
+                               Mitocarta = df_mito$gene_id,
+                               Impi = df_impi$gene_id,
+                          masterTable = df_mT$gene_id),
+                          label_alpha = 0) +
+  scale_fill_gradient(low = "#c0ddf0", high = "#4981BF") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+venn_gencode <- ggVennDiagram(list(Mitocarta = df_mito$gene_id,
+                                   Gencode = df_gencode$gene_id,
+                                   Impi = df_impi$gene_id),
+                              label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF", trans = "log") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+venn_mT <- ggVennDiagram(list(Mitocarta = df_mito$gene_id,
+                              masterTable = df_mT$gene_id,
+                              Impi = df_impi$gene_id),
+                         label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF", trans = "log") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+venn_mito_impi_mt <- ggVennDiagram(list(Mitocarta_impi = df_mito_impi$gene_id,
+                                        masterTable = df_mT$gene_id),
+                                   label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF", trans = "log") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+venn_mito_impi_gencode <- ggVennDiagram(list(Mitocarta_impi = df_mito_impi$gene_id,
+                                             Gencode = df_gencode$gene_id),
+                                        label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF", trans = "log") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+
+
+#pdf(file = "../Plots/mitochondrial_gene_id_venn.pdf", width = 6, height = 4)
+venn_all
+venn_gencode
+venn_mT
+venn_mito_impi_gencode
+venn_mito_impi_mt
+#dev.off()
+```
+
+# Barplots
+```{r}
+# Prepare data
+df_only_mito <-
+  left_join(x=df_mito, y=df_impi, by="gene_id", keep=TRUE) %>% 
+  filter(is.na(gene_id.y)) %>%
+  select(gene_id.x) %>% 
+  rename(gene_id = gene_id.x) %>% 
+  mutate(catalogue="mitocarta")
+  
+df_only_impi <-
+  left_join(x=df_impi, y=df_mito, by="gene_id", keep=TRUE) %>% 
+  filter(is.na(gene_id.y)) %>%
+  select(gene_id.x) %>% 
+  rename(gene_id = gene_id.x) %>% 
+  mutate(catalogue="impi")
+
+df_mito_impi_intersect <-
+  inner_join(x=df_impi, y=df_mito, by="gene_id") %>% 
+  mutate(catalogue="impi+mitocarta")
+
+df_gencode_composition <-
+  left_join(x=df_gencode, y=(bind_rows(df_only_mito, df_only_impi, df_mito_impi_intersect)), by="gene_id") %>% 
+  replace(is.na(.),"other") %>% 
+  mutate(data_source = "Gencode.v45")
+  
+df_mT_composition <-
+  left_join(x=df_mT, y=(bind_rows(df_only_mito, df_only_impi, df_mito_impi_intersect)), by="gene_id") %>% 
+  replace(is.na(.),"other") %>% 
+  mutate(data_source = "masterTable")
+
+# Stacked bar plot for gencode and masterTable
+bind_rows(df_gencode_composition, df_mT_composition) %>% 
+  group_by(data_source, catalogue) %>% 
+  summarise(number_of_transcripts = n()) %>% 
+  mutate(percent = prop.table(number_of_transcripts)) %>% 
+  # Plot data using barplot
+  ggplot(data=.,
+         aes(x=data_source,#reorder(technology, -percent),
+             y=percent,
+             fill=factor(catalogue, levels=c("other","mitocarta", "impi", "impi+mito")))) + 
+  geom_bar(stat="identity") +
+  geom_text(aes(label = paste0(catalogue, " (", scales::comma(number_of_transcripts), ")")),
+            position=position_stack(vjust=0.5),
+            size = 4) +
+  theme_minimal() +
+  scale_fill_manual(values=c("#ea8553", "#d386b7", "#6fb293", "#728fb4")) +  # "#93ae55", "#d70e17", "#1887ab", "#a9629f"
+  ylab('Percentage of transcript ids') +
+  xlab('Data source') +
+  theme(legend.position = "none",
+        axis.ticks.y = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5,
+                                  size=11.0),
+        panel.background = element_rect(fill = NA),
+        panel.grid.major.x = element_line(colour = NA),
+        panel.grid.minor.x = element_line(colour = NA),
+        axis.text.y = element_text(colour="black",
+                                  face="bold")) +
+  ggtitle(label="Number of Gencode and masterTable transcripts common with MitoCarta, Impi or both databases") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1)) -> bar_plot_gen_mT_composition
+  
+
+# Stacked bar plot for mitoCarta and impi
+df_only_gencode <-
+  left_join(x=(df_gencode %>% 
+                 select(gene_id) %>% 
+                 distinct(gene_id)),
+            y=(df_mT %>% 
+                 select(gene_id) %>% 
+                 distinct(gene_id)), by="gene_id", keep=TRUE) %>% 
+  filter(is.na(gene_id.y)) %>%
+  select(gene_id.x) %>% 
+  rename(gene_id = gene_id.x) %>% 
+  mutate(catalogue="gencode")
+  
+df_only_mT <-
+  left_join(x=(df_mT %>%
+                 select(gene_id) %>% 
+                 distinct(gene_id)),
+            y=(df_gencode %>% 
+                 select(gene_id) %>% 
+                 distinct(gene_id)), by="gene_id", keep=TRUE) %>% 
+  filter(is.na(gene_id.y)) %>%
+  select(gene_id.x) %>% 
+  rename(gene_id = gene_id.x) %>% 
+  mutate(catalogue="masterTable")
+
+df_gencode_mt_intersect <-
+  inner_join(x=(df_gencode %>% 
+                  select(gene_id) %>% 
+                  distinct(gene_id)),
+             y=(df_mT %>% 
+                  select(gene_id) %>% 
+                  distinct(gene_id)), by="gene_id") %>% 
+  mutate(catalogue="gencode+masterTable")
+
+df_mito_composition <-
+  left_join(x=df_mito, y=(bind_rows(df_only_gencode, df_only_mT, df_gencode_mt_intersect)), by="gene_id") %>% 
+  replace(is.na(.),"other") %>% 
+  mutate(data_source = "MitoCarta3.0")
+
+df_impi_composition <-
+  left_join(x=df_impi, y=(bind_rows(df_only_gencode, df_only_mT, df_gencode_mt_intersect)), by="gene_id") %>% 
+  replace(is.na(.),"other") %>% 
+  mutate(data_source = "IMPI-2021-Q4pre")
+
+# Stacked bar plot for mitoCarta and impi
+bind_rows(df_mito_composition, df_impi_composition) %>% 
+  group_by(data_source, catalogue) %>% 
+  summarise(number_of_genes = n()) %>% 
+  mutate(percent = prop.table(number_of_genes)) %>% 
+  # Plot data using barplot
+  ggplot(data=.,
+         aes(x=data_source,
+             y=percent,
+             fill=factor(catalogue, levels=c("other", "gencode", "gencode+masterTable", "masterTable")))) + 
+  geom_bar(stat="identity") +
+  geom_text(aes(label = paste0(catalogue, " (", scales::comma(number_of_genes), ")")),
+            position=position_stack(vjust=0.5),
+            size = 3.8) +
+  theme_minimal() +
+  scale_fill_manual(values=c("#ea8553", "#d386b7", "#6fb293", "#728fb4")) +  # "#93ae55", "#d70e17", "#1887ab", "#a9629f"
+  ylab('Percentage of gene ids') +
+  xlab('Data source') +
+  theme(legend.position = "none",
+        axis.ticks.y = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5,
+                                  size=11.0),
+        panel.background = element_rect(fill = NA),
+        panel.grid.major.x = element_line(colour = NA),
+        panel.grid.minor.x = element_line(colour = NA),
+        axis.text.y = element_text(colour="black",
+                                  face="bold")) +
+  ggtitle(label="Number of MitoCarta and Impi genes common with gencode, masterTable or both annotations") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1)) -> bar_plot_mito_impi_composition
+
+
+#pdf(file = "../Plots/mitochondrial_transcripts_composition_barplot.pdf", width = 6, height = 8)
+bar_plot_gen_mT_composition
+bar_plot_mito_impi_composition
+```
+
