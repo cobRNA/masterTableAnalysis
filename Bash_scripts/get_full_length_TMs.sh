@@ -22,18 +22,36 @@ done
 # | awk '{print $1"\t"$2"\t"$3"\t"$5"\t0\t"$4}'
 
 
-while read lab sampl
+# -------------------
+# make clusters for 3p and 5p
+# -------------------
+
+for file in `ls ./Data/Catalogues/*.hg38.bed12`
 do
-    name=`echo $lab\_HpreCap_0+\_$sampl`
+    echo $file
+    lab=`basename $file | awk -F "." '{print $1}'`
     while read end dist
     do
-        echo "cat $name.bed | /users/rg/jlagarde/julien_utils_public/extractTranscriptEndsFromBed12.pl $end |sortbed | /users/rg/buszczynska/bin/bedtools2.26/bin/bedtools merge -s -d $dist -c 4 -o collapse -i stdin | awk '{print \$1\"\t\"\$2\"\t\"\$3\"\t\"\$5\"\t0\t\"\$4}' > $name.$end.bed" > $lab.$sampl.$end.endsExtr.sh
-        qsub -cwd -N $lab.$sampl.$end.endsExtr -m abe -M barbara.uszczynska@crg.es -q rg-el7,long-centos79,short-centos79  -l h_rt=48:00:00 -l virtual_free=20G -pe smp 1 -e $lab.$sampl.$end.endsExtr.log $lab.$sampl.$end.endsExtr.sh
-    done < ends.dist.3.tsv
-done < ont.brain.samples.tsv
+        echo $end
+        cat $file | ./Utils/extractTranscriptEndsFromBed12.pl $end | sort -k1,1 -k2,2n | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools merge -c 4 -o collapse -s -d 5 -i stdin > ./Data/Processed/Clusters/${lab}_${end}p_clusters.bed
+    done < ./Data/Source/ends.dist.tsv
+done
 
 
-/Data/Source/ends.dist.tsv
+#bedtools merge -c 4,5,6 -o collapse,distinct,distinct -s -d 5 -i stdin
+
+# while read lab sampl
+# do
+#     name=`echo $lab\_HpreCap_0+\_$sampl`
+#     while read end dist
+#     do
+#         echo "cat $name.bed | /users/rg/jlagarde/julien_utils_public/extractTranscriptEndsFromBed12.pl $end |sortbed | /users/rg/buszczynska/bin/bedtools2.26/bin/bedtools merge -s -d $dist -c 4 -o collapse -i stdin | awk '{print \$1\"\t\"\$2\"\t\"\$3\"\t\"\$5\"\t0\t\"\$4}' > $name.$end.bed" > $lab.$sampl.$end.endsExtr.sh
+#         qsub -cwd -N $lab.$sampl.$end.endsExtr -m abe -M barbara.uszczynska@crg.es -q rg-el7,long-centos79,short-centos79  -l h_rt=48:00:00 -l virtual_free=20G -pe smp 1 -e $lab.$sampl.$end.endsExtr.log $lab.$sampl.$end.endsExtr.sh
+#     done < ends.dist.3.tsv
+# done < ont.brain.samples.tsv
+
+
+# /Data/Source/ends.dist.tsv
 
 
 
