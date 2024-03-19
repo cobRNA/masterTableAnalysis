@@ -28,11 +28,27 @@ df_mito_impi <- df_mito %>%
   bind_rows(df_impi) %>%
   distinct()
 
-df_gencode <- read.delim("../Data/Mitochondrial_catalogues/gencode.v45.annotation.ids",
+
+df_gencode45 <- read.delim("../Data/Gencode_annotations/gencode.v45.annotation.ids",
                          sep="\t",
                          header = FALSE)
-colnames(df_gencode) <- c("gene_id",
+colnames(df_gencode45) <- c("gene_id",
                           "transcript_id")
+
+
+df_gencode44 <- read.delim("../Data/Gencode_annotations/gencode.v44.annotation.ids",
+                         sep="\t",
+                         header = FALSE)
+colnames(df_gencode44) <- c("gene_id",
+                          "transcript_id")
+
+
+df_gencode27 <- read.delim("../Data/Gencode_annotations/gencode.v27.annotation.ids",
+                         sep="\t",
+                         header = FALSE)
+colnames(df_gencode27) <- c("gene_id",
+                          "transcript_id")
+
 
 df_mT <- read.delim("../Data/masterTable/Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged.ids",
                     sep="\t",
@@ -46,11 +62,26 @@ df_mT_mitoImpi_slice <- read.delim("../Data/Processed/Mitochondrial/impi_and_Mit
 colnames(df_mT_mitoImpi_slice) <- c("gene_id",
                                     "transcript_id")
 
-df_gencode_mitoImpi_slice <- read.delim("../Data/Processed/Mitochondrial/impi_and_MitoCarta.gencode.v45.annotation_slice.ids",
+
+df_gencode45_mitoImpi_slice <- read.delim("../Data/Processed/Mitochondrial/impi_and_MitoCarta.gencode.v45.annotation.gtf_slice.ids",
                                         sep="\t",
                                         header = FALSE)
-colnames(df_gencode_mitoImpi_slice) <- c("gene_id",
+colnames(df_gencode45_mitoImpi_slice) <- c("gene_id",
                                          "transcript_id")
+
+df_gencode44_mitoImpi_slice <- read.delim("../Data/Processed/Mitochondrial/impi_and_MitoCarta.gencode.v44.annotation.gtf_slice.ids",
+                                        sep="\t",
+                                        header = FALSE)
+colnames(df_gencode44_mitoImpi_slice) <- c("gene_id",
+                                         "transcript_id")
+
+
+df_gencode27_mitoImpi_slice <- read.delim("../Data/Processed/Mitochondrial/impi_and_MitoCarta.gencode.v27.annotation.gtf_slice.ids",
+                                        sep="\t",
+                                        header = FALSE)
+colnames(df_gencode27_mitoImpi_slice) <- c("gene_id",
+                                         "transcript_id")
+
 ```
 "Human.MitoCarta3.0",
 "impi-2021-q4pre-20211001-dist_0",
@@ -59,7 +90,7 @@ colnames(df_gencode_mitoImpi_slice) <- c("gene_id",
 
 # Venn diagram
 ```{r}
-venn_all <- ggVennDiagram(list(Gencode = df_gencode$gene_id,
+venn_all_45 <- ggVennDiagram(list(Gencode45 = df_gencode45$gene_id,
                                Mitocarta = df_mito$gene_id,
                                Impi = df_impi$gene_id,
                           masterTable = df_mT$gene_id),
@@ -68,8 +99,42 @@ venn_all <- ggVennDiagram(list(Gencode = df_gencode$gene_id,
   scale_x_continuous(expand = expansion(mult = .2)) +
   theme(legend.position = "none")
 
-venn_gencode <- ggVennDiagram(list(Mitocarta = df_mito$gene_id,
-                                   Gencode = df_gencode$gene_id,
+venn_all_44 <- ggVennDiagram(list(Gencode44 = df_gencode44$gene_id,
+                               Mitocarta = df_mito$gene_id,
+                               Impi = df_impi$gene_id,
+                          masterTable = df_mT$gene_id),
+                          label_alpha = 0) +
+  scale_fill_gradient(low = "#c0ddf0", high = "#4981BF") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+venn_all_27 <- ggVennDiagram(list(Gencode27 = df_gencode27$gene_id,
+                               Mitocarta = df_mito$gene_id,
+                               Impi = df_impi$gene_id,
+                          masterTable = df_mT$gene_id),
+                          label_alpha = 0) +
+  scale_fill_gradient(low = "#c0ddf0", high = "#4981BF") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+venn_gencode45 <- ggVennDiagram(list(Mitocarta = df_mito$gene_id,
+                                   Gencode45 = df_gencode45$gene_id,
+                                   Impi = df_impi$gene_id),
+                              label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF", trans = "log") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+venn_gencode44 <- ggVennDiagram(list(Mitocarta = df_mito$gene_id,
+                                   Gencode44 = df_gencode44$gene_id,
+                                   Impi = df_impi$gene_id),
+                              label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF", trans = "log") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+venn_gencode27 <- ggVennDiagram(list(Mitocarta = df_mito$gene_id,
+                                   Gencode27 = df_gencode27$gene_id,
                                    Impi = df_impi$gene_id),
                               label_alpha = 0) +
   scale_fill_gradient(low = "#F4FAFE", high = "#4981BF", trans = "log") +
@@ -84,8 +149,22 @@ venn_mT <- ggVennDiagram(list(Mitocarta = df_mito$gene_id,
   scale_x_continuous(expand = expansion(mult = .2)) +
   theme(legend.position = "none")
 
-venn_mitoImpi_gencode <- ggVennDiagram(list(Mitocarta_impi = df_mito_impi$gene_id,
-                                             Gencode = df_gencode$gene_id),
+venn_mitoImpi_gencode45 <- ggVennDiagram(list(Mitocarta_impi = df_mito_impi$gene_id,
+                                             Gencode45 = df_gencode45$gene_id),
+                                        label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF", trans = "log") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+venn_mitoImpi_gencode44 <- ggVennDiagram(list(Mitocarta_impi = df_mito_impi$gene_id,
+                                             Gencode44 = df_gencode44$gene_id),
+                                        label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF", trans = "log") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+venn_mitoImpi_gencode27 <- ggVennDiagram(list(Mitocarta_impi = df_mito_impi$gene_id,
+                                             Gencode27 = df_gencode27$gene_id),
                                         label_alpha = 0) +
   scale_fill_gradient(low = "#F4FAFE", high = "#4981BF", trans = "log") +
   scale_x_continuous(expand = expansion(mult = .2)) +
@@ -107,8 +186,26 @@ venn_mito_impi <- ggVennDiagram(list(Mitocarta = df_mito$gene_id,
   theme(legend.position = "none")
 
 
-venn_gencode_mitoImpi_slice <- ggVennDiagram(list(Mitocarta = df_mito$gene_id,
-                                                  "Gencode slice" = df_gencode_mitoImpi_slice$gene_id,
+venn_gencode45_mitoImpi_slice <- ggVennDiagram(list(Mitocarta = df_mito$gene_id,
+                                                  "Gencode45 slice" = df_gencode45_mitoImpi_slice$gene_id,
+                                                  Impi = df_impi$gene_id),
+                                        label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+
+venn_gencode44_mitoImpi_slice <- ggVennDiagram(list(Mitocarta = df_mito$gene_id,
+                                                  "Gencode44 slice" = df_gencode44_mitoImpi_slice$gene_id,
+                                                  Impi = df_impi$gene_id),
+                                        label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+
+venn_gencode27_mitoImpi_slice <- ggVennDiagram(list(Mitocarta = df_mito$gene_id,
+                                                  "Gencode27 slice" = df_gencode27_mitoImpi_slice$gene_id,
                                                   Impi = df_impi$gene_id),
                                         label_alpha = 0) +
   scale_fill_gradient(low = "#F4FAFE", high = "#4981BF") +
@@ -126,13 +223,21 @@ venn_mT_mitoImpi_slice <- ggVennDiagram(list(Mitocarta = df_mito$gene_id,
 
 
 #pdf(file = "../Plots/mitochondrial_gene_id_venn.pdf", width = 6, height = 4)
-venn_all
-venn_gencode
+venn_all_45
+venn_all_44
+venn_all_27
+venn_gencode45
+venn_gencode44
+venn_gencode27
 venn_mT
-venn_mitoImpi_gencode
+venn_mitoImpi_gencode45
+venn_mitoImpi_gencode44
+venn_mitoImpi_gencode27
 venn_mitoImpi_mt
 venn_mito_impi
-venn_gencode_mitoImpi_slice
+venn_gencode45_mitoImpi_slice
+venn_gencode44_mitoImpi_slice
+venn_gencode27_mitoImpi_slice
 venn_mT_mitoImpi_slice
 #dev.off()
 ```
@@ -158,10 +263,23 @@ df_mito_impi_intersect <-
   inner_join(x=df_impi, y=df_mito, by="gene_id") %>% 
   mutate(catalogue="impi+mitocarta")
 
-df_gencode_slice_composition <-
-  left_join(x=df_gencode_mitoImpi_slice, y=(bind_rows(df_only_mito, df_only_impi, df_mito_impi_intersect)), by="gene_id") %>% 
+df_gencode45_slice_composition <-
+  left_join(x=df_gencode45_mitoImpi_slice, y=(bind_rows(df_only_mito, df_only_impi, df_mito_impi_intersect)), by="gene_id") %>% 
   replace(is.na(.),"other") %>% 
   mutate(data_source = "Gencode.v45")
+
+
+df_gencode44_slice_composition <-
+  left_join(x=df_gencode44_mitoImpi_slice, y=(bind_rows(df_only_mito, df_only_impi, df_mito_impi_intersect)), by="gene_id") %>% 
+  replace(is.na(.),"other") %>% 
+  mutate(data_source = "Gencode.v44")
+
+
+df_gencode27_slice_composition <-
+  left_join(x=df_gencode27_mitoImpi_slice, y=(bind_rows(df_only_mito, df_only_impi, df_mito_impi_intersect)), by="gene_id") %>% 
+  replace(is.na(.),"other") %>% 
+  mutate(data_source = "Gencode.v27")
+
   
 df_mT_slice_composition <-
   left_join(x=df_mT_mitoImpi_slice, y=(bind_rows(df_only_mito, df_only_impi, df_mito_impi_intersect)), by="gene_id") %>% 
@@ -169,7 +287,7 @@ df_mT_slice_composition <-
   mutate(data_source = "masterTable")
 
 # Stacked bar plot for gencode and masterTable
-bind_rows(df_gencode_slice_composition, df_mT_slice_composition) %>% 
+bind_rows(df_gencode45_slice_composition, df_gencode44_slice_composition, df_gencode27_slice_composition, df_mT_slice_composition) %>% 
   group_by(data_source, catalogue) %>% 
   summarise(number_of_transcripts = n()) %>% 
   mutate(percent = prop.table(number_of_transcripts)) %>% 
@@ -181,7 +299,7 @@ bind_rows(df_gencode_slice_composition, df_mT_slice_composition) %>%
   geom_bar(stat="identity") +
   geom_text(aes(label = paste0(catalogue, " (", scales::comma(number_of_transcripts), ")")),
             position=position_stack(vjust=0.5),
-            size = 4) +
+            size = 3) +
   theme_minimal() +
   scale_fill_manual(values=c("#d386b7", "#6fb293", "#728fb4")) +  # "#93ae55", "#d70e17", "#1887ab", "#a9629f"
   ylab('Percentage of transcript ids') +
@@ -201,7 +319,7 @@ bind_rows(df_gencode_slice_composition, df_mT_slice_composition) %>%
   
 
 
-#pdf(file = "../Plots/mitochondrial_transcripts_composition_barplot.pdf", width = 6, height = 8)
+#pdf(file = "../Plots/mitochondrial_transcripts_composition_barplot.pdf", width = 8, height = 5)
 bar_plot_gen_mT_slice_composition
 ```
 # JUNK
