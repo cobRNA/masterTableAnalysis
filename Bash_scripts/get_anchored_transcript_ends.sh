@@ -24,7 +24,7 @@ for catalogue in ./Data/Catalogues/*bed12
         # bedtools merge -c 4 -o collapse -s -d 5 -i ./Data/Processed/PolyA/$cat_name.3.bed.vspolyAsignals.bedtsv > ./Data/Processed/Clusters/${cat_name}_3p_clusters.bed
 
         # Sort before anchoring
-        cat ./Data/Processed/Catalogues_gff/$filename.gff | sort -k1,1 -k4,4n -k5,5n "$@" > ./Data/Processed/Catalogues_gff/${filename}_sorted.gff
+        cat ./Data/Processed/Catalogues_gff/$filename.gff | sort -k1,1 -k12,12 -k4,4n -k5,5n "$@" > ./Data/Processed/Catalogues_gff/${filename}_sorted.gff
 
         # Run anchoring on sorted content
         ./Utils/anchorTranscriptsEnds.pl ./Data/Processed/Catalogues_gff/${filename}_sorted.gff ./Data/Processed/Cage/$cat_name.tx.cage ./Data/Processed/PolyA/$cat_name.tx.polyA ./Data/Processed/Clusters/${cat_name}_5p_clusters.bed ./Data/Processed/Clusters/${cat_name}_3p_clusters.bed > ./Data/Processed/Anchored_catalogues/anchored_${filename}.gff                     
