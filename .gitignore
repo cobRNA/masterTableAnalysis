@@ -19,6 +19,7 @@ mt_rna_slice_by_target_single.py
 /R_notebooks/.Rhistory
 .Rproj.user
 /Data/Other
+.temp
 
 # Copyrighted
 /Utils
