@@ -26,16 +26,16 @@ done
 # make clusters for 3p and 5p
 # -------------------
 
-for file in `ls ./Data/Catalogues/*.hg38.bed12`
-do
-    echo $file
-    lab=`basename $file | awk -F "." '{print $1}'`
-    while read end dist
-    do
-        echo $end
-        cat $file | ./Utils/extractTranscriptEndsFromBed12.pl $end | sort -k1,1 -k2,2n | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools merge -c 4 -o collapse -s -d 5 -i stdin > ./Data/Processed/Clusters/${lab}_${end}p_clusters.bed
-    done < ./Data/Source/ends.dist.tsv
-done
+# for file in `ls ./Data/Catalogues/*.hg38.bed12`
+# do
+#     echo $file
+#     lab=`basename $file | awk -F "." '{print $1}'`
+#     while read end dist
+#     do
+#         echo $end
+#         cat $file | ./Utils/extractTranscriptEndsFromBed12.pl $end | sort -k1,1 -k2,2n | ./Utils/jlagarde/bin.bkp/bedtools2/bin/bedtools merge -c 4 -o collapse -s -d 5 -i stdin > ./Data/Processed/Clusters/${lab}_${end}p_clusters.bed
+#     done < ./Data/Source/ends.dist.tsv
+# done
 
 
 #bedtools merge -c 4,5,6 -o collapse,distinct,distinct -s -d 5 -i stdin
