@@ -6,6 +6,8 @@
 
 echo 'Cleaning-up data from previous run..'
 rm ./Data/Processed/mT/*
+rm ./Data/Processed/Cage/mT.tx.cage
+rm ./Data/Processed/PolyA/mT.tx.polyA
 echo 'Done.'
 
 #############################################
@@ -29,4 +31,18 @@ zcat ./Data/masterTable/Hv3_splicedmasterTable_refined.gtf.gz | grep -Ff ./Data/
 echo 'Done.'
 
 
+##############################################
+# Extract CAGE supported tx ids from mT slice
+##############################################
+# Use "cagePolyASupported" and "cageOnlySupported" tags
+echo 'Acquiring CAGE supported tx_ids...'
+cat ./Data/Processed/mT/Hv3_splicedmasterTable_refined_lncRNA.gtf | ./Utils/extract.gtf.tags.sh - transcript_id,endSupport | awk '$2=="cagePolyASupported" || $2=="cageOnlySupported"{print$1}' > ./Data/Processed/Cage/mT.tx.cage
+echo 'Done.'
 
+##############################################
+# Extract polyA supported tx ids from mT slice
+##############################################
+# Use "cagePolyASupported" and "polyAOnlySupported" tags
+echo 'Acquiring polyA supported tx_ids...'
+cat ./Data/Processed/mT/Hv3_splicedmasterTable_refined_lncRNA.gtf | ./Utils/extract.gtf.tags.sh - transcript_id,endSupport | awk '$2=="cagePolyASupported" || $2=="polyAOnlySupported"{print$1}' > ./Data/Processed/PolyA/mT.tx.polyA
+echo 'Done.'
