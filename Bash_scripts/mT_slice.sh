@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+##
+##  Creates lncRNA slice of the mT basing on 'longNonCoding' targets
+##
+
+
 #############################################
 # Clean-up generated data
 #############################################
