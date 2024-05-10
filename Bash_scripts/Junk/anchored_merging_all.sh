@@ -145,8 +145,8 @@ cat ./Data/Processed/Extracted_ends/ALL_catalogues+mT.3.bed | awk '{print $4}' |
 # Duplicated and supported on both ends: 1068
 
 
-cat ./Data/Processed/Extracted_ends/ALL_catalogues+mT.5.bed | awk '{if (count[$4] > 1) print $0; else if (count[$4] == 1) { print save[$4]; print $0; } else save[$4] = $0; count[$4]++; }' | awk '{print $4}' > ./Data/.temp/duplicated.5p.tx
-cat ./Data/Processed/Extracted_ends/ALL_catalogues+mT.3.bed | awk '{if (count[$4] > 1) print $0; else if (count[$4] == 1) { print save[$4]; print $0; } else save[$4] = $0; count[$4]++; }' | awk '{print $4}' > ./Data/.temp/duplicated.3p.tx
+cat ./Data/Processed/Extracted_ends/ALL_catalogues+mT.5.bed | awk '{if (count[$4] > 1) print $0; else if (count[$4] == 1) { print save[$4]; print $0; } else save[$4] = $0; count[$4]++; }' | awk '{print $4}' | sort | uniq > ./Data/.temp/duplicated.5p.tx
+cat ./Data/Processed/Extracted_ends/ALL_catalogues+mT.3.bed | awk '{if (count[$4] > 1) print $0; else if (count[$4] == 1) { print save[$4]; print $0; } else save[$4] = $0; count[$4]++; }' | awk '{print $4}' | sort | uniq > ./Data/.temp/duplicated.3p.tx
 
 echo "Duplicated and 5p supported only: $(cat ./Data/.temp/duplicated.5p.tx | grep -vFf ./Data/.temp/duplicated.3p.tx | wc -l)"
 echo "Duplicated and 3p supported only: $(cat ./Data/.temp/duplicated.3p.tx | grep -vFf ./Data/.temp/duplicated.5p.tx | wc -l)"
@@ -154,9 +154,6 @@ echo "Duplicated and supported on both ends: $(cat ./Data/.temp/duplicated.5p.tx
 ###### WYWALIC
 
 #echo '################## DONE ##################'
-
-
-
 
 
 
