@@ -347,7 +347,7 @@ data %>%
             size=4, position=position_stack(vjust=0.5)) +
   theme_bw() +
   scale_fill_manual(values=c("#d386b7", "#6fb293", "#728fb4")) +
-  ylab("Number of genes/transcripts") +
+  ylab("Number of genes / transcripts") +
   theme(axis.text.y = element_text(size = 12,  colour = "black"),
         axis.text.x = element_text(size = 12,  colour = "black"),
         legend.text = element_text(size = 12),
