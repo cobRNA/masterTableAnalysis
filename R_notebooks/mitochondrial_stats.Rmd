@@ -322,6 +322,71 @@ bind_rows(df_gencode45_slice_composition, df_gencode44_slice_composition, df_gen
 #pdf(file = "../Plots/mitochondrial_transcripts_composition_barplot.pdf", width = 8, height = 5)
 bar_plot_gen_mT_slice_composition
 ```
+
+# Better plot to compare Gencode.v27 and masterTable slice
+
+```{r}
+# prepare data
+data <- data.frame(Source = c("Gencode.v27", "Gencode.v27", "Gencode.v27", "masterTable", "masterTable", "masterTable",
+                              "Gencode.v27", "Gencode.v27", "Gencode.v27", "masterTable", "masterTable", "masterTable"),
+                   Catalog = c("mitocarta", "impi+mitocarta", "impi", "mitocarta", "impi+mitocarta", "impi",
+                               "mitocarta", "impi+mitocarta", "impi", "mitocarta", "impi+mitocarta", "impi"),
+                   Type = c("Genes", "Genes", "Genes", "Genes", "Genes", "Genes",
+                            "Transcripts", "Transcripts", "Transcripts", "Transcripts", "Transcripts", "Transcripts"),
+                   Count = c(140, 998, 358, 140, 997, 354,
+                             1166, 8692, 3509, 1316, 10425, 4491)
+                   )
+
+data %>% 
+  ggplot(aes(x=Source,
+             y=Count,
+             fill=factor(Catalog, levels=c("mitocarta", "impi+mitocarta", "impi")))) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label=scales::comma(Count)),
+            vjust=0.5,
+            size=4, position=position_stack(vjust=0.5)) +
+  theme_bw() +
+  scale_fill_manual(values=c("#d386b7", "#6fb293", "#728fb4")) +
+  ylab("Number of genes/transcripts") +
+  theme(axis.text.y = element_text(size = 12,  colour = "black"),
+        axis.text.x = element_text(size = 12,  colour = "black"),
+        legend.text = element_text(size = 12),
+        plot.title = element_text(size = 22, hjust = 0.5),
+        legend.title = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 14),
+        strip.text = element_text(size = 14)) +
+  scale_y_continuous(label = scales::comma) +
+  facet_wrap(~Type,
+             scales = "free") -> comparison_plot
+comparison_plot
+```
+
+# Save plot as pdf
+```{r}
+pdf(file = "../Plots/Mito_gen.v27-mT_comparison.pdf", width = 9, height = 5)
+comparison_plot
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # JUNK
 ```{r}
 # Stacked bar plot for mitoCarta and impi
