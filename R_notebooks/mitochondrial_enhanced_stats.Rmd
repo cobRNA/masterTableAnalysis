@@ -1,0 +1,461 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Load Libraries
+```{r}
+library(dplyr)
+library(ggplot2)
+library(ggVennDiagram)
+library(stringr)
+```
+
+# Prepare data
+```{bash, engine.opts='-l'}
+ls ./Dane
+# HUMAN
+# prepare mitocarta3.0 ids
+cat ./Dane/Human.MitoCarta3.0.csv | sed -z 's/|/\n/g' | sort | uniq | grep "\S" > ./Dane/Human.MitoCarta3.0.ids
+# prepare Human_impi_and_MitoCarta ids
+cat ./Dane/Human_impi-2021-q4pre-20211001-dist_0.ids ./Dane/Human.MitoCarta3.0.ids | sort | uniq | grep "\S" > ./Dane/Human_impi_and_MitoCarta.ids
+# preapre gencode.v27 mitochondrial slice
+zcat ./Dane/gencode.v27.annotation.gtf.gz | awk 'NR>5{print$0}' | awk '$3=="transcript"' | ../Utils/extract.gtf.tags.sh - gene_id,transcript_id | awk -F'\t' 'gsub(/\.[0-9]+/,""){print $1"\t"$2}' | sed 's/_PAR_Y//g' | sort | uniq | grep -f ./Dane/Human_impi_and_MitoCarta.ids | sort | uniq | grep "\S"> ./Dane/gencode.v27_mito_slice.ids
+# prepare human_mt_gencode.v27 mitochondrial slice
+zcat ./Dane/Hv3_gencode.v27+mt.gtf.gz | ../Utils/extract.gtf.tags.sh - gene_id,transcript_id | awk -F'\t' 'gsub(/\.[0-9]+/,""){print $1"\t"$2}' | sed 's/_PAR_Y//g' | sort | uniq | grep -f ./Dane/Human_impi_and_MitoCarta.ids | sort | uniq | grep "\S" > ./Dane/Hv3_gencode.v27+mt_mito_slice.ids
+
+# MOUSE
+# prepare mitocarta3.0 ids
+cat ./Dane/Mouse.MitoCarta3.0.csv | sed -z 's/|/\n/g' | grep "\S" > ./Dane/Mouse.MitoCarta3.0.ids
+# prepare impi for mouse (I will use orthologs(from ensembl) and human impi)
+cat ./Dane/Mouse_orthologs_mart_export.tsv | grep -f ./Dane/Human_impi-2021-q4pre-20211001-dist_0.ids | awk '{print $2}' | sort | uniq | grep "\S" > ./Dane/Mouse_impi-2021-q4pre-20211001-dist_0.ids
+# prepare Mouse_impi_and_MitoCarta ids
+cat ./Dane/Mouse_impi-2021-q4pre-20211001-dist_0.ids ./Dane/Mouse.MitoCarta3.0.ids | sort | uniq | grep "\S"> ./Dane/Mouse_impi_and_MitoCarta.ids
+# preapre gencode.vM16 mitochondrial slice
+zcat ./Dane/gencode.vM16.annotation.gtf.gz | awk 'NR>5{print$0}' | awk '$3=="transcript"' | ../Utils/extract.gtf.tags.sh - gene_id,transcript_id | awk -F'\t' 'gsub(/\.[0-9]+/,""){print $1"\t"$2}' | sed 's/_PAR_Y//g' | sort | uniq | grep -f ./Dane/Mouse_impi_and_MitoCarta.ids | sort | uniq | grep "\S" > ./Dane/gencode.vM16_mito_slice.ids
+# prepare mouse_mt_gencode.vM16 mitochondrial slice
+zcat ./Dane/Mv2_gencode.vM16+mt.gtf.gz | ../Utils/extract.gtf.tags.sh - gene_id,transcript_id | awk -F'\t' 'gsub(/\.[0-9]+/,""){print $1"\t"$2}' | sed 's/_PAR_Y//g' | sort | uniq | grep -f ./Dane/Mouse_impi_and_MitoCarta.ids | sort | uniq | grep "\S" > ./Dane/Mv2_gencode.vM16+mt_mito_slice.ids
+
+```
+
+# Load data
+```{r}
+# HUMAN
+df_H_mito <- read.delim("./Dane/Human.MitoCarta3.0.ids",
+                      sep="\t",
+                      header = FALSE)
+colnames(df_H_mito) <- c("gene_id")
+
+
+df_H_impi <- read.delim("./Dane/Human_impi-2021-q4pre-20211001-dist_0.ids",
+                      sep="\t",
+                      header = FALSE)
+colnames(df_H_impi) <- c("gene_id")
+
+df_H_mito_impi <- df_H_mito %>%
+  bind_rows(df_H_impi) %>%
+  distinct()
+
+df_Hv3_mT_mitoImpi_slice <- read.delim("./Dane/Hv3_gencode.v27+mt_mito_slice.ids",
+                                   sep="\t",
+                                   header = FALSE)
+colnames(df_Hv3_mT_mitoImpi_slice) <- c("gene_id",
+                                        "transcript_id")
+
+
+df_gencode27_mitoImpi_slice <- read.delim("./Dane/gencode.v27_mito_slice.ids",
+                                        sep="\t",
+                                        header = FALSE)
+colnames(df_gencode27_mitoImpi_slice) <- c("gene_id",
+                                         "transcript_id")
+
+
+# MOUSE
+df_M_mito <- read.delim("./Dane/Mouse.MitoCarta3.0.ids",
+                      sep="\t",
+                      header = FALSE)
+colnames(df_M_mito) <- c("gene_id")
+
+
+df_M_impi <- read.delim("./Dane/Mouse_impi-2021-q4pre-20211001-dist_0.ids",
+                      sep="\t",
+                      header = FALSE)
+colnames(df_M_impi) <- c("gene_id")
+
+df_M_mito_impi <- df_M_mito %>%
+  bind_rows(df_M_impi) %>%
+  distinct()
+
+df_Mv2_mT_mitoImpi_slice <- read.delim("./Dane/Mv2_gencode.vM16+mt_mito_slice.ids",
+                                   sep="\t",
+                                   header = FALSE)
+colnames(df_Mv2_mT_mitoImpi_slice) <- c("gene_id",
+                                        "transcript_id")
+
+
+df_gencodeM16_mitoImpi_slice <- read.delim("./Dane/gencode.vM16_mito_slice.ids",
+                                        sep="\t",
+                                        header = FALSE)
+colnames(df_gencodeM16_mitoImpi_slice) <- c("gene_id",
+                                         "transcript_id")
+```
+"Human.MitoCarta3.0",
+"impi-2021-q4pre-20211001-dist_0",
+"gencode.v45.annotation",
+"Hv3_enhancedCLS3_refined_+gencodev43.loci.refmerged"
+
+```{r}
+df_gencodeM16_mitoImpi_slice %>% 
+  select(gene_id) %>% 
+  distinct() %>% 
+  tail()
+```
+
+
+# Venn diagram
+```{r}
+# HUMAN
+venn_gencode27_mitoImpi_slice <- ggVennDiagram(list(Mitocarta = df_H_mito$gene_id,
+                                                  "Gencode27 slice" = df_gencode27_mitoImpi_slice$gene_id,
+                                                  Impi = df_H_impi$gene_id),
+                                        label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+
+venn_Hv3_mT_mitoImpi_slice <- ggVennDiagram(list(Mitocarta = df_H_mito$gene_id,
+                                             "Hv3 masterTable slice" = df_Hv3_mT_mitoImpi_slice$gene_id,
+                                             Impi = df_H_impi$gene_id),
+                                        label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+# MOUSE
+venn_gencodeM16_mitoImpi_slice <- ggVennDiagram(list(Mitocarta = df_M_mito$gene_id,
+                                                  "GencodeM16 slice" = df_gencodeM16_mitoImpi_slice$gene_id,
+                                                  Impi = df_M_impi$gene_id),
+                                        label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+
+venn_Mv2_mT_mitoImpi_slice <- ggVennDiagram(list(Mitocarta = df_M_mito$gene_id,
+                                             "Mv2 masterTable slice" = df_Mv2_mT_mitoImpi_slice$gene_id,
+                                             Impi = df_M_impi$gene_id),
+                                        label_alpha = 0) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF") +
+  scale_x_continuous(expand = expansion(mult = .2)) +
+  theme(legend.position = "none")
+
+
+#pdf(file = "../Plots/mitochondrial_gene_id_venn.pdf", width = 6, height = 4)
+venn_gencode27_mitoImpi_slice
+venn_Hv3_mT_mitoImpi_slice
+venn_gencodeM16_mitoImpi_slice
+venn_Mv2_mT_mitoImpi_slice
+#dev.off()
+```
+
+# Barplots
+```{r}
+# Prepare data
+# HUMAN
+df_only_H_mito <-
+  left_join(x=df_H_mito, y=df_H_impi, by="gene_id", keep=TRUE) %>% 
+  filter(is.na(gene_id.y)) %>%
+  select(gene_id.x) %>% 
+  rename(gene_id = gene_id.x) %>% 
+  mutate(catalogue="mitocarta")
+  
+df_only_H_impi <-
+  left_join(x=df_H_impi, y=df_H_mito, by="gene_id", keep=TRUE) %>% 
+  filter(is.na(gene_id.y)) %>%
+  select(gene_id.x) %>% 
+  rename(gene_id = gene_id.x) %>% 
+  mutate(catalogue="impi")
+
+df_H_mito_impi_intersect <-
+  inner_join(x=df_H_impi, y=df_H_mito, by="gene_id") %>% 
+  mutate(catalogue="impi+mitocarta")
+
+df_gencode27_slice_composition <-
+  left_join(x=df_gencode27_mitoImpi_slice, y=(bind_rows(df_only_H_mito, df_only_H_impi, df_H_mito_impi_intersect)), by="gene_id") %>% 
+  replace(is.na(.),"other") %>% 
+  mutate(data_source = "Gencode.v27")
+
+  
+df_Hv3_mT_slice_composition <-
+  left_join(x=df_Hv3_mT_mitoImpi_slice, y=(bind_rows(df_only_H_mito, df_only_H_impi, df_H_mito_impi_intersect)), by="gene_id") %>% 
+  replace(is.na(.),"other") %>% 
+  mutate(data_source = "Hv3_masterTable")
+
+# Stacked bar plot for gencode and masterTable
+bind_rows(df_gencode27_slice_composition, df_Hv3_mT_slice_composition) %>% 
+  group_by(data_source, catalogue) %>% 
+  summarise(number_of_transcripts = n()) %>% 
+  mutate(percent = prop.table(number_of_transcripts)) %>% 
+  # Plot data using barplot
+  ggplot(data=.,
+         aes(x=data_source,#reorder(technology, -percent),
+             y=percent,
+             fill=factor(catalogue, levels=c("mitocarta", "impi", "impi+mitocarta")))) + 
+  geom_bar(stat="identity") +
+  geom_text(aes(label = paste0(catalogue, " (", scales::comma(number_of_transcripts), ")")),
+            position=position_stack(vjust=0.5),
+            size = 3) +
+  theme_minimal() +
+  scale_fill_manual(values=c("#d386b7", "#6fb293", "#728fb4")) +  # "#93ae55", "#d70e17", "#1887ab", "#a9629f"
+  ylab('Percentage of transcript ids') +
+  xlab('Data source') +
+  theme(legend.position = "none",
+        axis.ticks.y = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5,
+                                  size=11.0),
+        panel.background = element_rect(fill = NA),
+        panel.grid.major.x = element_line(colour = NA),
+        panel.grid.minor.x = element_line(colour = NA),
+        axis.text.y = element_text(colour="black",
+                                  face="bold")) +
+  ggtitle(label="Number of Gencode and masterTable transcripts common with MitoCarta, Impi or both databases\n(Human)") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1)) -> bar_plot_H_gen_mT_slice_composition
+  
+
+# MOUSE
+df_only_M_mito <-
+  left_join(x=df_M_mito, y=df_M_impi, by="gene_id", keep=TRUE) %>% 
+  filter(is.na(gene_id.y)) %>%
+  select(gene_id.x) %>% 
+  rename(gene_id = gene_id.x) %>% 
+  mutate(catalogue="mitocarta")
+  
+df_only_M_impi <-
+  left_join(x=df_M_impi, y=df_M_mito, by="gene_id", keep=TRUE) %>% 
+  filter(is.na(gene_id.y)) %>%
+  select(gene_id.x) %>% 
+  rename(gene_id = gene_id.x) %>% 
+  mutate(catalogue="impi")
+
+df_M_mito_impi_intersect <-
+  inner_join(x=df_M_impi, y=df_M_mito, by="gene_id") %>% 
+  mutate(catalogue="impi+mitocarta")
+
+df_gencodeM16_slice_composition <-
+  left_join(x=df_gencodeM16_mitoImpi_slice, y=(bind_rows(df_only_M_mito, df_only_M_impi, df_M_mito_impi_intersect)), by="gene_id") %>% 
+  replace(is.na(.),"other") %>% 
+  mutate(data_source = "Gencode.v27")
+
+  
+df_Mv2_mT_slice_composition <-
+  left_join(x=df_Mv2_mT_mitoImpi_slice, y=(bind_rows(df_only_M_mito, df_only_M_impi, df_M_mito_impi_intersect)), by="gene_id") %>% 
+  replace(is.na(.),"other") %>% 
+  mutate(data_source = "Hv3_masterTable")
+
+# Stacked bar plot for gencode and masterTable
+bind_rows(df_gencodeM16_slice_composition, df_Mv2_mT_slice_composition) %>% 
+  group_by(data_source, catalogue) %>% 
+  summarise(number_of_transcripts = n()) %>% 
+  mutate(percent = prop.table(number_of_transcripts)) %>% 
+  # Plot data using barplot
+  ggplot(data=.,
+         aes(x=data_source,#reorder(technology, -percent),
+             y=percent,
+             fill=factor(catalogue, levels=c("mitocarta", "impi", "impi+mitocarta")))) + 
+  geom_bar(stat="identity") +
+  geom_text(aes(label = paste0(catalogue, " (", scales::comma(number_of_transcripts), ")")),
+            position=position_stack(vjust=0.5),
+            size = 3) +
+  theme_minimal() +
+  scale_fill_manual(values=c("#d386b7", "#6fb293", "#728fb4")) +  # "#93ae55", "#d70e17", "#1887ab", "#a9629f"
+  ylab('Percentage of transcript ids') +
+  xlab('Data source') +
+  theme(legend.position = "none",
+        axis.ticks.y = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5,
+                                  size=11.0),
+        panel.background = element_rect(fill = NA),
+        panel.grid.major.x = element_line(colour = NA),
+        panel.grid.minor.x = element_line(colour = NA),
+        axis.text.y = element_text(colour="black",
+                                  face="bold")) +
+  ggtitle(label="Number of Gencode and masterTable transcripts common with MitoCarta, Impi or both databases\n(Mouse)") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1)) -> bar_plot_M_gen_mT_slice_composition
+
+#pdf(file = "../Plots/mitochondrial_transcripts_composition_barplot.pdf", width = 8, height = 5)
+bar_plot_H_gen_mT_slice_composition
+bar_plot_M_gen_mT_slice_composition
+```
+
+# Better plot to compare Gencode.v27 and masterTable slice
+
+```{r}
+# prepare data
+data_human <- data.frame(Source = c("GENCODE 27", "GENCODE 27", "GENCODE 27", "Full annotation (hsa)", "Full annotation (hsa)", "Full annotation (hsa)",
+                                    "GENCODE 27", "GENCODE 27", "GENCODE 27", "Full annotation (hsa)", "Full annotation (hsa)", "Full annotation (hsa)"),
+                         Catalog = c("MitoCarta 3.0", "IMPI+MitoCarta 3.0", "IMPI", "MitoCarta 3.0", "IMPI+MitoCarta 3.0", "IMPI",
+                                     "MitoCarta 3.0", "IMPI+MitoCarta 3.0", "IMPI", "MitoCarta 3.0", "IMPI+MitoCarta 3.0", "IMPI"),
+                   Species = c("Human", "Human", "Human", "Human", "Human", "Human",
+                               "Human", "Human", "Human", "Human", "Human", "Human"),
+                   Type = c("Genes", "Genes", "Genes", "Genes", "Genes", "Genes",
+                            "Transcripts", "Transcripts", "Transcripts", "Transcripts", "Transcripts", "Transcripts"),
+                   Count = c(140, 998, 358, 131, 899, 334,
+                             1166, 8688, 3509, 7386, 56276, 16180)
+                   )
+
+data_mouse <- data.frame(Source = c("GENCODE M16", "GENCODE M16", "GENCODE M16", "Full annotation (mm)", "Full annotation (mm)", "Full annotation (mm)",
+                                    "GENCODE M16", "GENCODE M16", "GENCODE M16", "Full annotation (mm)", "Full annotation (mm)", "Full annotation (mm)"),
+                         Catalog = c("MitoCarta 3.0", "IMPI+MitoCarta 3.0", "IMPI", "MitoCarta 3.0", "IMPI+MitoCarta 3.0", "IMPI",
+                                     "MitoCarta 3.0", "IMPI+MitoCarta 3.0", "IMPI", "MitoCarta 3.0", "IMPI+MitoCarta 3.0", "IMPI"),
+                         Species = c("Mouse", "Mouse", "Mouse", "Mouse", "Mouse", "Mouse",
+                                     "Mouse", "Mouse", "Mouse", "Mouse", "Mouse", "Mouse"),
+                         Type = c("Genes", "Genes", "Genes", "Genes", "Genes", "Genes",
+                                  "Transcripts", "Transcripts", "Transcripts", "Transcripts", "Transcripts", "Transcripts"),
+                         Count = c(167, 965, 381, 160, 922, 367,
+                                   737, 4992, 2004, 7457, 49143, 13378)
+                   )
+# Join data
+data <- bind_rows(data_human, data_mouse)
+
+data %>% 
+  ggplot(aes(x=factor(Source, levels=c("GENCODE 27", "Full annotation (hsa)",
+                                                "GENCODE M16", "Full annotation (mm)")),
+             y=Count,
+             fill=factor(Catalog, levels=c("MitoCarta 3.0", "IMPI+MitoCarta 3.0", "IMPI")))) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label=scales::comma(Count)),
+            vjust=0.5,
+            size=4, position=position_stack(vjust=0.5)) +
+  theme_bw() +
+  scale_fill_manual(values=c("#c1c551", "#6eb293", "#7269a8")) +
+  ylab("Number of genes / transcripts") +
+  theme(axis.text.y = element_text(size = 12,  colour = "black"),
+        axis.text.x = element_text(size = 9,  colour = "black", angle=60, hjust = 1),
+        legend.text = element_text(size = 12),
+        plot.title = element_text(size = 22, hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "top",
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 14),
+        strip.text = element_text(size = 14)) +
+  scale_y_continuous(label = scales::comma) +
+  #scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  facet_wrap(~Type,
+             scales = "free") -> comparison_plot
+comparison_plot
+```
+
+# Save plot as pdf
+```{r}
+pdf(file = "../Plots/Mito_gen.v27-mT_comparison_rotated.pdf", width = 9, height = 5)
+comparison_plot
+```
+
+
+
+
+
+
+
+```{r}
+df_Mv2_mT_mitoImpi_slice %>% 
+  select(transcript_id) %>% 
+  distinct() %>% 
+  head()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+# JUNK
+```{r}
+# Stacked bar plot for mitoCarta and impi
+df_only_gencode <-
+  left_join(x=(df_gencode %>% 
+                 select(gene_id) %>% 
+                 distinct(gene_id)),
+            y=(df_mT %>% 
+                 select(gene_id) %>% 
+                 distinct(gene_id)), by="gene_id", keep=TRUE) %>% 
+  filter(is.na(gene_id.y)) %>%
+  select(gene_id.x) %>% 
+  rename(gene_id = gene_id.x) %>% 
+  mutate(catalogue="gencode")
+  
+df_only_mT <-
+  left_join(x=(df_mT %>%
+                 select(gene_id) %>% 
+                 distinct(gene_id)),
+            y=(df_gencode %>% 
+                 select(gene_id) %>% 
+                 distinct(gene_id)), by="gene_id", keep=TRUE) %>% 
+  filter(is.na(gene_id.y)) %>%
+  select(gene_id.x) %>% 
+  rename(gene_id = gene_id.x) %>% 
+  mutate(catalogue="masterTable")
+
+df_gencode_mt_intersect <-
+  inner_join(x=(df_gencode %>% 
+                  select(gene_id) %>% 
+                  distinct(gene_id)),
+             y=(df_mT %>% 
+                  select(gene_id) %>% 
+                  distinct(gene_id)), by="gene_id") %>% 
+  mutate(catalogue="gencode+masterTable")
+
+df_mito_composition <-
+  left_join(x=df_mito, y=(bind_rows(df_only_gencode, df_only_mT, df_gencode_mt_intersect)), by="gene_id") %>% 
+  replace(is.na(.),"other") %>% 
+  mutate(data_source = "MitoCarta3.0")
+
+df_impi_composition <-
+  left_join(x=df_impi, y=(bind_rows(df_only_gencode, df_only_mT, df_gencode_mt_intersect)), by="gene_id") %>% 
+  replace(is.na(.),"other") %>% 
+  mutate(data_source = "IMPI-2021-Q4pre")
+
+# Stacked bar plot for mitoCarta and impi
+bind_rows(df_mito_composition, df_impi_composition) %>% 
+  group_by(data_source, catalogue) %>% 
+  summarise(number_of_genes = n()) %>% 
+  mutate(percent = prop.table(number_of_genes)) %>% 
+  # Plot data using barplot
+  ggplot(data=.,
+         aes(x=data_source,
+             y=percent,
+             fill=factor(catalogue, levels=c("other", "gencode", "gencode+masterTable", "masterTable")))) + 
+  geom_bar(stat="identity") +
+  geom_text(aes(label = paste0(catalogue, " (", scales::comma(number_of_genes), ")")),
+            position=position_stack(vjust=0.5),
+            size = 3.8) +
+  theme_minimal() +
+  scale_fill_manual(values=c("#ea8553", "#d386b7", "#6fb293", "#728fb4")) +  # "#93ae55", "#d70e17", "#1887ab", "#a9629f"
+  ylab('Percentage of gene ids') +
+  xlab('Data source') +
+  theme(legend.position = "none",
+        axis.ticks.y = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5,
+                                  size=11.0),
+        panel.background = element_rect(fill = NA),
+        panel.grid.major.x = element_line(colour = NA),
+        panel.grid.minor.x = element_line(colour = NA),
+        axis.text.y = element_text(colour="black",
+                                  face="bold")) +
+  ggtitle(label="Number of MitoCarta and Impi genes common with gencode, masterTable or both annotations") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1)) -> bar_plot_mito_impi_composition
+
+bar_plot_mito_impi_composition
+```
+
