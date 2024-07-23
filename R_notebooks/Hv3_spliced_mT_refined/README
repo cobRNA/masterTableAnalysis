@@ -1,0 +1,18 @@
+#######################################################
+Hv3_SPLICEDMASTERTABLE
+
+1.
+cat Hv3_splicedmasterTable.gtf | awk '$3=="transcript"' > trans_Hv3_splicedmasterTable.gtf
+
+2. 
+cat trans_Hv3_splicedmasterTable.gtf | ~/Tomasz/Projects/Python/masterTable/mt_ic_stats.py > formatted_Hv3_ICmT.tsv
+
+3.
+cat trans_Hv3_splicedmasterTable.gtf | ~/Tomasz/Projects/Python/masterTable/mt_sample_stats.py > ALL_ICmT_Hv3_sample_stats.tsv
+
+
+
+I used points 1 and 3 to create the heatmaps.
+Used newer version of the Hv3_splicedmt -> Hv3_splicedmasterTable_refined
+
+Due to huge size I only kept compressed version of plot input data. Just decompress and run R notebook.
